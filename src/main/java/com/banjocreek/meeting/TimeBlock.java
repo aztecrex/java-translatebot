@@ -17,7 +17,7 @@ public final class TimeBlock {
         final ArrayList<TimeBlock> candidates = new ArrayList<>();
 
         a.forEach(fa -> b.forEach(fb -> {
-            maybeCommon(length, fa, fb).ifPresent(candidates::add);
+            fa.intersect(fb).flatMap(blk -> blk.fit(length)).ifPresent(candidates::add);
         }));
 
         return candidates.stream().reduce(TimeBlock::earliest);
@@ -26,18 +26,6 @@ public final class TimeBlock {
 
     private static TimeBlock earliest(final TimeBlock a, final TimeBlock b) {
         return a.start().isBefore(b.start()) ? a : b;
-    }
-
-    private static Optional<TimeBlock> maybeCommon(final Duration l, final TimeBlock a, final TimeBlock b) {
-
-        final long begin = Math.max(a.start().toEpochMilli(), b.start().toEpochMilli());
-        final long end = Math.min(a.start().plus(a.duration()).toEpochMilli(),
-                b.start().plus(b.duration()).toEpochMilli());
-
-        if (l.toMillis() >= end - begin)
-            return Optional.of(new TimeBlock(Instant.ofEpochMilli(begin), l));
-        else
-            return Optional.empty();
     }
 
     private final Duration duration;
@@ -58,13 +46,38 @@ public final class TimeBlock {
         return this == obj || obj instanceof TimeBlock && eq((TimeBlock) obj);
     }
 
+    public Optional<TimeBlock> fit(final Duration length) {
+        return this.duration.compareTo(length) >= 0 ? Optional.of(new TimeBlock(this.start, length)) : Optional.empty();
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(this.start, this.duration);
     }
 
+    public Optional<TimeBlock> intersect(final TimeBlock other) {
+
+        // assumes positive duration
+
+        final Instant begin = this.start.isBefore(other.start) ? other.start : this.start;
+        final Instant end = end().isBefore(other.end()) ? end() : other.end();
+
+        final Duration available = Duration.between(begin, end);
+
+        return Optional.of(available).filter(d -> !d.isNegative() && !d.isZero()).map(d -> new TimeBlock(begin, d));
+
+    }
+
     public Instant start() {
         return this.start;
+    }
+
+    private Instant end() {
+
+        // assumes positive duration
+
+        return this.start.plus(this.duration);
+
     }
 
     private boolean eq(final TimeBlock other) {
