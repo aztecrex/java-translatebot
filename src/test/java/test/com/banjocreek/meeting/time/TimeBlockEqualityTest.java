@@ -1,4 +1,4 @@
-package test.com.banjocreek.meeting;
+package test.com.banjocreek.meeting.time;
 
 import static org.junit.Assert.*;
 
@@ -10,7 +10,7 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.banjocreek.meeting.TimeBlock;
+import com.banjocreek.meeting.time.TimeBlock;
 
 public class TimeBlockEqualityTest {
 

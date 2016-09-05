@@ -1,4 +1,4 @@
-package com.banjocreek.meeting;
+package com.banjocreek.meeting.time;
 
 import java.time.Duration;
 import java.time.Instant;
