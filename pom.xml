@@ -3,23 +3,20 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.banjocreek.meeting</groupId>
-	<artifactId>meeting</artifactId>
+	<artifactId>meeting-all</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
+	<packaging>pom</packaging>
 
-	<name>meeting</name>
-	<url>http://maven.apache.org</url>
+	<name>MEETING :: All modules</name>
+
+	<modules>
+           <module>time</module>
+	</modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<version.java>1.8</version.java>
 	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
 	<build>
 		<pluginManagement>
 			<plugins>
@@ -30,16 +27,6 @@
 				</plugin>
 			</plugins>
 		</pluginManagement>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
-				</configuration>
-			</plugin>
-		</plugins>
 	</build>
 	<dependencyManagement>
 		<dependencies>
