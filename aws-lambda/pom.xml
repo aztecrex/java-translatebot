@@ -4,8 +4,8 @@
 	<parent>
 		<groupId>com.banjocreek.meeting</groupId>
 		<artifactId>meeting-all</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-		          <relativePath>../pom.xml</relativePath>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<artifactId>meeting-lambda</artifactId>
 	<packaging>jar</packaging>
