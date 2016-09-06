@@ -11,6 +11,7 @@
 
 	<modules>
            <module>time</module>
+           <module>aws-lambda</module>
 	</modules>
 
 	<properties>
