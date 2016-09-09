@@ -10,6 +10,7 @@ public final class SlackRequestBean {
      * naming. Underscores.
      */
     private String channel_id;
+    private String command;
     private String team_domain;
     private String team_id;
     private String text;
@@ -18,18 +19,13 @@ public final class SlackRequestBean {
     private String trigger_word;
     private String user_id;
     private String user_name;
-    private String command;
-
-    public String getCommand() {
-        return command;
-    }
-
-    public void setCommand(String command) {
-        this.command = command;
-    }
 
     public String getChannel_id() {
         return this.channel_id;
+    }
+
+    public String getCommand() {
+        return this.command;
     }
 
     public String getTeam_domain() {
@@ -66,6 +62,10 @@ public final class SlackRequestBean {
 
     public void setChannel_id(final String channel_id) {
         this.channel_id = channel_id;
+    }
+
+    public void setCommand(final String command) {
+        this.command = command;
     }
 
     public void setTeam_domain(final String team_domain) {

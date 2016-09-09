@@ -5,14 +5,14 @@ package com.banjocreek.meeting.lambda;
  */
 public final class SlackResponseBean {
 
+    private String text;
+
     public String getText() {
-        return text;
+        return this.text;
     }
 
-    public void setText(String text) {
+    public void setText(final String text) {
         this.text = text;
     }
-
-    private String text;
 
 }

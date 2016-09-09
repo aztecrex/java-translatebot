@@ -6,10 +6,10 @@ public final class SlackMeetingHandler {
 
     private final Function<String, String> process = new Reverse();
 
-    public SlackResponseBean handle(SlackRequestBean request) {
+    public SlackResponseBean handle(final SlackRequestBean request) {
 
         // @formatter:off
-        String msg = new StringBuilder()
+        final String msg = new StringBuilder()
 
         .append("channelId").append(": ").append(request.getChannel_id()).append("\n")
         .append("teamDomain").append(": ").append(request.getTeam_domain()).append("\n")
@@ -21,13 +21,13 @@ public final class SlackMeetingHandler {
         .append("command").append(": ").append(request.getCommand()).append("\n")
         .append("userId").append(": ").append(request.getUser_id()).append("\n")
         .append("userName").append(": ").append(request.getUser_name()).append("\n")
-        
-        .append("result").append(": ").append(process.apply(request.getText()))
-        
+
+        .append("result").append(": ").append(this.process.apply(request.getText()))
+
         .toString();
         // @formatter:on
 
-        SlackResponseBean response = new SlackResponseBean();
+        final SlackResponseBean response = new SlackResponseBean();
         response.setText(msg);
         return response;
     }
