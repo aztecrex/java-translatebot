@@ -33,6 +33,7 @@ import com.amazonaws.services.lambda.model.CreateFunctionResult;
 import com.amazonaws.services.lambda.model.DeleteFunctionRequest;
 import com.amazonaws.services.lambda.model.FunctionCode;
 import com.amazonaws.services.lambda.model.Runtime;
+import com.amazonaws.services.lambda.model.UpdateFunctionCodeRequest;
 
 public class EventHandlerDeployer {
     static final String Path = "bot";
@@ -59,6 +60,15 @@ public class EventHandlerDeployer {
 
         deleteApi();
         deleteFunction();
+
+    }
+
+    public void updateFunction() {
+
+        final UpdateFunctionCodeRequest ufrq = new UpdateFunctionCodeRequest().withFunctionName(FunctionName)
+                .withZipFile(loadJar());
+
+        awsLambdaClient.updateFunctionCode(ufrq);
 
     }
 
@@ -201,7 +211,7 @@ public class EventHandlerDeployer {
         this.awsApiClient.putMethodResponse(pmrsrq);
     }
 
-    private FunctionCode loadCode() {
+    private ByteBuffer loadJar() {
         final File jarfile = new File(
                 "/Users/aztecrex/Code/java-meeting/aws-lambda/target/meeting-lambda-0.0.1-SNAPSHOT.jar");
 
@@ -216,8 +226,12 @@ public class EventHandlerDeployer {
         } catch (final IOException iox) {
             throw new RuntimeException("cannot load jar", iox);
         }
+        return jarbuf;
+    }
 
-        return new FunctionCode().withZipFile(jarbuf);
+    private FunctionCode loadCode() {
+
+        return new FunctionCode().withZipFile(loadJar());
     }
 
     private void permitInvokeLambda(final String accountId, final CreateRestApiResult createApiResult,

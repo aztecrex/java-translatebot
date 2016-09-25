@@ -26,7 +26,7 @@ public class OauthHandler {
     public final Map<String, Object> handle(final Map<String, String> in) {
 
         final Map<String, String> authData = generateOutput(in);
-        final String authBody = body(authData);
+        final String authBody = urlEncode(authData);
 
         try {
             final URL u = new URL("https://slack.com/api/oauth.access?"+authBody);
@@ -50,7 +50,7 @@ public class OauthHandler {
 
     }
 
-    private final String body(final Map<String, String> params) {
+    private final String urlEncode(final Map<String, String> params) {
         return params.entrySet().stream().map(this::param).collect(Collectors.joining("&"));
     }
 
