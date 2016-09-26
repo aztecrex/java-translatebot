@@ -1,11 +1,11 @@
 package com.banjocreek.translate;
 
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +21,12 @@ import javax.json.JsonReader;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.BatchWriteItemRequest;
+import com.amazonaws.services.dynamodbv2.model.PutRequest;
+import com.amazonaws.services.dynamodbv2.model.WriteRequest;
+
 public class OauthHandler {
 
     public final Map<String, Object> handle(final Map<String, String> in) {
@@ -29,7 +35,7 @@ public class OauthHandler {
         final String authBody = urlEncode(authData);
 
         try {
-            final URL u = new URL("https://slack.com/api/oauth.access?"+authBody);
+            final URL u = new URL("https://slack.com/api/oauth.access?" + authBody);
             System.out.println(u);
             final HttpURLConnection conn = (HttpURLConnection) u.openConnection();
             conn.setDoInput(true);
@@ -38,7 +44,8 @@ public class OauthHandler {
                 final JsonReader reader = Json.createReader(is);
                 final JsonObject slackAuth = reader.readObject();
                 final Map<String, Object> result = plainifyJsonObject(slackAuth);
-                return result;
+                storeResult(result);
+                return Collections.singletonMap("ok", true);
             } finally {
                 conn.disconnect();
             }
@@ -48,6 +55,37 @@ public class OauthHandler {
             return Collections.singletonMap("error", x.getMessage());
         }
 
+    }
+
+    private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
+    private static final String TableName = "TranslateSlack";
+
+    private void storeResult(Map<String, Object> result) {
+        final String userId = (String) result.get("user_id");
+        final String userToken = (String) result.get("access_token");
+        @SuppressWarnings("unchecked")
+        final Map<String, Object> bot = (Map<String, Object>) result.get("bot");
+        final String botToken = (String) bot.get("bot_access_token");
+
+        ArrayList<PutRequest> putRequests = new ArrayList<>();
+        final HashMap<String, AttributeValue> userItem = new HashMap<>();
+        userItem.put("id", new AttributeValue("user:" + userId + ":token"));
+        userItem.put("value", new AttributeValue(userToken));
+        putRequests.add(new PutRequest().withItem(userItem));
+
+        final HashMap<String, AttributeValue> botItem = new HashMap<>();
+        botItem.put("id", new AttributeValue("global:bottoken"));
+        botItem.put("value", new AttributeValue(botToken));
+        putRequests.add(new PutRequest().withItem(botItem));
+
+        final List<WriteRequest> writeRequests = putRequests.stream()
+                .map(WriteRequest::new)
+                .collect(Collectors.toList());
+        HashMap<String, List<WriteRequest>> requestItems = new HashMap<>();
+        requestItems.put(TableName, writeRequests);
+        final BatchWriteItemRequest batchWriteItemRequest = new BatchWriteItemRequest().withRequestItems(requestItems);
+
+        ddb.batchWriteItem(batchWriteItemRequest);
     }
 
     private final String urlEncode(final Map<String, String> params) {
