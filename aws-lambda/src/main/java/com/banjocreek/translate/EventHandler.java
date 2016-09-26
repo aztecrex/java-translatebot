@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -30,16 +31,33 @@ public class EventHandler {
 
     private static final String GregToken = "xoxp-76454819904-76454679222-83673130469-99853824512c2ed758f83cf2f7b9ba5b";
 
-    private final String Token = "U3TUKFx27sL8zJnSu49ivl3Z";
+    private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<>();
+    private final AtomicReference<DBValueRetriever> botToken = new AtomicReference<>();
+
+    // private final String Token = "U3TUKFx27sL8zJnSu49ivl3Z";
 
     // this needs to go into a DB
-    private static final String BotToken = "xoxb-83677101745-nSYXqzOy4wtDM1uDC8WbEcnf";
+//    private static final String BotToken = "xoxb-83677101745-nSYXqzOy4wtDM1uDC8WbEcnf";
 
+    private String fetch(String id, AtomicReference<DBValueRetriever> retriever) {
+        if (retriever.get() == null)
+            retriever.compareAndSet(null, new DBValueRetriever(id));
+        return retriever.get().get();
+    }
+
+    private String vtoken() {
+        return fetch("global:callbacktoken", verificationToken);
+    }
+
+    private String btoken() {
+        return fetch("global:bottoken", botToken);
+    }
+    
     public Map<String, String> handle(final Map<String, Object> envelope) {
 
         System.out.println("Entering handler");
 
-        final Optional<Object> maybeToken = field("token").apply(envelope).filter(Token::equals);
+        final Optional<Object> maybeToken = field("token").apply(envelope).filter(vtoken()::equals);
         if (!maybeToken.isPresent())
             return Collections.emptyMap();
 
@@ -84,7 +102,6 @@ public class EventHandler {
             return;
         }
 
-
         final String text = ev.get("text");
         final String channel = ev.get("channel");
         final String timestamp = ev.get("ts");
@@ -105,7 +122,7 @@ public class EventHandler {
 
     private Optional<String> fetchUsername(String userId) {
         final HashMap<String, String> params = new HashMap<>();
-        params.put("token", BotToken);
+        params.put("token", btoken());
         params.put("user", userId);
 
         try {
@@ -185,7 +202,7 @@ public class EventHandler {
 
     private void postMessage(final String channel, final String text) {
         final HashMap<String, String> params = new HashMap<>();
-        params.put("token", BotToken);
+        params.put("token", btoken());
         params.put("text", text);
         params.put("channel", channel);
 
