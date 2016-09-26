@@ -10,7 +10,6 @@
 	<name>MEETING :: All modules</name>
 
 	<modules>
-		<module>time</module>
 		<module>aws-lambda</module>
 		<module>deploy</module>
 	</modules>
