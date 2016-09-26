@@ -2,15 +2,15 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>com.banjocreek.meeting</groupId>
-		<artifactId>meeting-all</artifactId>
+		<groupId>com.banjocreek.translatebot</groupId>
+		<artifactId>translatebot-all</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
-	<artifactId>meeting-deploy</artifactId>
+	<artifactId>translatebot-deploy</artifactId>
 	<packaging>jar</packaging>
 
-	<name>MEETING :: Deployment Facilities</name>
+	<name>TRANSLATEBOT :: Deployment Facilities</name>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -51,3 +51,4 @@
 		</plugins>
 	</build>
 </project>
+
