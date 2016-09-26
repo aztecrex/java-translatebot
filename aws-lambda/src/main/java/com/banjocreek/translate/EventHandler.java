@@ -11,8 +11,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -22,46 +24,24 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonObject;
 
 public class EventHandler {
+
+    private static final List<String> Languages = Arrays.asList("en", "es", "fr");
 
     private static <K, V> Function<Map<K, V>, Optional<V>> field(final K key) {
         return m -> Optional.ofNullable(m.get(key));
     }
 
-    private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<>();
     private final AtomicReference<DBValueRetriever> botToken = new AtomicReference<>();
+    // TODO make this a map per team and create a configuration command
+    private final AtomicReference<DBValueRetriever> googleToken = new AtomicReference<>();
 
     private final ConcurrentHashMap<String, DBValueRetriever> users = new ConcurrentHashMap<>();
 
-    private String fetch(String key, String id, ConcurrentHashMap<String, DBValueRetriever> values) {
-        if (!values.containsKey(key))
-            values.putIfAbsent(key, new DBValueRetriever(id));
-        return values.get(key).get();
-    }
-
-    private String fetch(String id, AtomicReference<DBValueRetriever> retriever) {
-        if (retriever.get() == null)
-            retriever.compareAndSet(null, new DBValueRetriever(id));
-        return retriever.get().get();
-    }
-
-    private Optional<String> utoken(String userId) {
-        try {
-            return Optional.of(fetch(userId, "user:" + userId + ":token", users));
-        } catch (Exception x) {
-            return Optional.empty();
-        }
-    }
-
-    private String vtoken() {
-        return fetch("global:callbacktoken", verificationToken);
-    }
-
-    private String btoken() {
-        return fetch("global:bottoken", botToken);
-    }
+    private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<>();
 
     public Map<String, String> handle(final Map<String, Object> envelope) {
 
@@ -103,34 +83,25 @@ public class EventHandler {
         return Collections.emptyMap();
     }
 
-    private void handleMessage(final Map<String, String> ev) {
-
-        System.out.println("In message handler");
-
-        if (ev.containsKey("subtype")) {
-            System.out.println("ignoring message with subtype: " + ev.get("subtype"));
-            return;
-        }
-
-        final String text = ev.get("text");
-        final String channel = ev.get("channel");
-        final String timestamp = ev.get("ts");
-        final String userId = ev.get("user");
-
-        final String altText = text + "\n" + "_In en: " + text + "_";
-
-        boolean updated = updateMessage(userId, channel, timestamp, altText);
-
-        if (!updated) {
-            final String userName = fetchUsername(userId).orElse("Somebody");
-
-            final String botText = "_" + userName + " says, \"" + ev.get("text") + "\"_";
-            postMessage(channel, botText);
-
-        }
+    private String btoken() {
+        return fetch("global:bottoken", this.botToken);
     }
 
-    private Optional<String> fetchUsername(String userId) {
+    private String fetch(final String id, final AtomicReference<DBValueRetriever> retriever) {
+        if (retriever.get() == null) {
+            retriever.compareAndSet(null, new DBValueRetriever(id));
+        }
+        return retriever.get().get();
+    }
+
+    private String fetch(final String key, final String id, final ConcurrentHashMap<String, DBValueRetriever> values) {
+        if (!values.containsKey(key)) {
+            values.putIfAbsent(key, new DBValueRetriever(id));
+        }
+        return values.get(key).get();
+    }
+
+    private Optional<String> fetchUsername(final String userId) {
         final HashMap<String, String> params = new HashMap<>();
         params.put("token", btoken());
         params.put("user", userId);
@@ -165,6 +136,44 @@ public class EventHandler {
 
     }
 
+    private String gtoken() {
+        return fetch("global:googletoken", this.googleToken);
+    }
+
+    private void handleMessage(final Map<String, String> ev) {
+
+        System.out.println("In message handler");
+
+        if (ev.containsKey("subtype")) {
+            System.out.println("ignoring message with subtype: " + ev.get("subtype"));
+            return;
+        }
+
+        final String text = ev.get("text");
+        final String channel = ev.get("channel");
+        final String timestamp = ev.get("ts");
+        final String userId = ev.get("user");
+
+        final List<Pair<String, String>> translations = Languages.stream()
+                .map(l -> Pair.create(l, translate(l, text)))
+                .filter(p -> p._2.isPresent())
+                .map(p -> Pair.create(p._1, p._2.get()))
+                .collect(Collectors.toList());
+
+        final String altText = text + "\n"
+                + translations.stream().map(p -> "_In " + p._1 + ": " + p._2 + "_").collect(Collectors.joining("\n"));
+
+        final boolean updated = updateMessage(userId, channel, timestamp, altText);
+
+        if (!updated) {
+            final String userName = fetchUsername(userId).orElse("Somebody");
+
+            translations.stream().map(p -> "_" + userName + " says (" + p._1 + "), \"" + p._2 + "\"_").forEach(
+                    x -> postMessage(channel, x));
+
+        }
+    }
+
     private void pipe(final InputStream is, final OutputStream dest) throws IOException {
         final ByteBuffer buf = ByteBuffer.allocate(1024);
         final ReadableByteChannel ich = Channels.newChannel(is);
@@ -176,41 +185,6 @@ public class EventHandler {
             }
             buf.clear();
         }
-    }
-
-    private boolean updateMessage(final String userId, final String channel, String timestamp, final String text) {
-        final Optional<String> maybeUserToken = utoken(userId);
-        if (!maybeUserToken.isPresent()) 
-            return false;
-        final HashMap<String, String> params = new HashMap<>();
-        params.put("token", maybeUserToken.get());
-        params.put("text", text);
-        params.put("channel", channel);
-        params.put("ts", timestamp);
-
-        try {
-            final URL u = new URL("https://slack.com/api/chat.update?" + urlEncodeAll(params));
-            System.out.println("URL is " + u);
-            final HttpURLConnection connection = (HttpURLConnection) u.openConnection();
-            connection.setDoInput(true);
-            connection.setRequestMethod("POST");
-            final int status = connection.getResponseCode();
-            try (InputStream is = connection.getInputStream()) {
-                if (status < 200 || status >= 300) {
-                    System.err.println("CRASH: slack returned an error: " + status);
-                    pipe(is, System.err);
-                } else {
-                    System.out.println("update response status: " + status);
-                    JsonObject response = Json.createReader(is).readObject();
-                    System.out.println(response);
-                    return response.getBoolean("ok");
-                }
-            }
-        } catch (final Exception x) {
-            System.err.println("CRASH: Failure trying to invoke slack API");
-            x.printStackTrace(System.err);
-        }
-        return false;
     }
 
     private void postMessage(final String channel, final String text) {
@@ -245,6 +219,96 @@ public class EventHandler {
         return maybeValue.filter(match::equals).isPresent();
     }
 
+    private Optional<String> translate(final String target, final String text) {
+
+        final HashMap<String, String> params = new HashMap<>();
+        params.put("key", gtoken());
+        params.put("target", target);
+        params.put("q", text);
+
+        try {
+            final URL u = new URL("https://www.googleapis.com/language/translate/v2?" + urlEncodeAll(params));
+            System.out.println("URL is " + u);
+            final HttpURLConnection connection = (HttpURLConnection) u.openConnection();
+            connection.setDoInput(true);
+            connection.setRequestMethod("GET");
+            final int response = connection.getResponseCode();
+            try (InputStream is = connection.getInputStream()) {
+                if (response < 200 || response >= 300) {
+                    System.err.println("ERROR: Google returned an error: " + response);
+                    pipe(is, System.err);
+                } else {
+                    final JsonObject entity = Json.createReader(is).readObject();
+                    if (entity.containsKey("data")) {
+                        final JsonObject data = entity.getJsonObject("data");
+                        if (data.containsKey("translations")) {
+                            final JsonArray translations = data.getJsonArray("translations");
+                            if (!translations.isEmpty()) {
+                                final JsonObject translation = translations.getJsonObject(0);
+                                final boolean moveOn;
+                                if (translation.containsKey("detectedSourceLanguage")) {
+                                    final String sourceLanguage = translation.getString("detectedSourceLanguage");
+                                    moveOn = !target.equals(sourceLanguage);
+                                } else {
+                                    moveOn = true;
+                                }
+                                if (moveOn) {
+                                    if (translation.containsKey("translatedText")) {
+                                        final String translatedText = translation.getString("translatedText");
+                                        final String correctedText = translatedText.replaceAll("&#39;", "'");
+                                        return Optional.of(correctedText);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (final Exception x) {
+            System.err.println("ERROR: Failure trying to invoke Google API");
+            x.printStackTrace(System.err);
+        }
+
+        return Optional.empty();
+
+    }
+
+    private boolean updateMessage(final String userId, final String channel, final String timestamp,
+            final String text) {
+        final Optional<String> maybeUserToken = utoken(userId);
+        if (!maybeUserToken.isPresent())
+            return false;
+        final HashMap<String, String> params = new HashMap<>();
+        params.put("token", maybeUserToken.get());
+        params.put("text", text);
+        params.put("channel", channel);
+        params.put("ts", timestamp);
+
+        try {
+            final URL u = new URL("https://slack.com/api/chat.update?" + urlEncodeAll(params));
+            System.out.println("URL is " + u);
+            final HttpURLConnection connection = (HttpURLConnection) u.openConnection();
+            connection.setDoInput(true);
+            connection.setRequestMethod("POST");
+            final int status = connection.getResponseCode();
+            try (InputStream is = connection.getInputStream()) {
+                if (status < 200 || status >= 300) {
+                    System.err.println("CRASH: slack returned an error: " + status);
+                    pipe(is, System.err);
+                } else {
+                    System.out.println("update response status: " + status);
+                    final JsonObject response = Json.createReader(is).readObject();
+                    System.out.println(response);
+                    return response.getBoolean("ok");
+                }
+            }
+        } catch (final Exception x) {
+            System.err.println("CRASH: Failure trying to invoke slack API");
+            x.printStackTrace(System.err);
+        }
+        return false;
+    }
+
     private final String urlEncodeAll(final Map<String, String> params) {
         return params.entrySet().stream().map(this::urlEncodeEntry).collect(Collectors.joining("&"));
     }
@@ -259,6 +323,34 @@ public class EventHandler {
         } catch (final UnsupportedEncodingException e) {
             throw new RuntimeException("cannot encode value", e);
         }
+    }
+
+    private Optional<String> utoken(final String userId) {
+        try {
+            return Optional.of(fetch(userId, "user:" + userId + ":token", this.users));
+        } catch (final Exception x) {
+            return Optional.empty();
+        }
+    }
+
+    private String vtoken() {
+        return fetch("global:callbacktoken", this.verificationToken);
+    }
+
+    public static final class Pair<T1, T2> {
+        public static <TT1, TT2> Pair<TT1, TT2> create(final TT1 t1, final TT2 t2) {
+            return new Pair<>(t1, t2);
+        }
+
+        public final T1 _1;
+
+        public final T2 _2;
+
+        private Pair(final T1 t1, final T2 t2) {
+            this._1 = t1;
+            this._2 = t2;
+        }
+
     }
 
 }
