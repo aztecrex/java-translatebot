@@ -1,4 +1,4 @@
-package com.banjocreek.translate;
+package com.banjocreek.translatebot;
 
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;

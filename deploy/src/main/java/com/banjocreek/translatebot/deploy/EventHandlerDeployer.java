@@ -1,4 +1,4 @@
-package com.banjocreek.meeting.deploy;
+package com.banjocreek.translatebot.deploy;
 
 import java.io.File;
 import java.io.IOException;
@@ -108,7 +108,7 @@ public class EventHandlerDeployer {
         final CreateFunctionRequest cfrq = new CreateFunctionRequest().withCode(fcod)
                 .withDescription("Translator Slack event handler")
                 .withFunctionName(FunctionName)
-                .withHandler("com.banjocreek.translate.EventHandler::handle")
+                .withHandler("com.banjocreek.translatebot.EventHandler::handle")
                 .withMemorySize(256)
                 .withPublish(true)
                 .withRole(executionRole)
@@ -213,7 +213,7 @@ public class EventHandlerDeployer {
 
     private ByteBuffer loadJar() {
         final File jarfile = new File(
-                "/Users/aztecrex/Code/java-meeting/aws-lambda/target/meeting-lambda-0.0.1-SNAPSHOT.jar");
+                "/Users/aztecrex/Code/java-translatebot/app/target/translatebot-app-0.0.1-SNAPSHOT.jar");
 
         final ByteBuffer jarbuf;
         try (FileChannel jarch = FileChannel.open(jarfile.toPath(), StandardOpenOption.READ)) {

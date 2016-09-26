@@ -1,4 +1,4 @@
-package com.banjocreek.translate;
+package com.banjocreek.translatebot;
 
 import java.io.IOException;
 import java.io.InputStream;

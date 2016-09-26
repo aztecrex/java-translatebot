@@ -1,4 +1,4 @@
-package com.banjocreek.meeting.deploy;
+package com.banjocreek.translatebot.deploy;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +38,7 @@ import com.amazonaws.services.lambda.model.Runtime;
 import com.amazonaws.services.lambda.model.UpdateFunctionCodeRequest;
 
 public class OauthHandlerDeployer {
-    private static final String HandlerSpec = "com.banjocreek.translate.OauthHandler::handle";
+    private static final String HandlerSpec = "com.banjocreek.translatebot.OauthHandler::handle";
 
     private static final String Path = "auth";
 
@@ -216,7 +216,7 @@ public class OauthHandlerDeployer {
 
     private ByteBuffer loadJar() {
         final File jarfile = new File(
-                "/Users/aztecrex/Code/java-meeting/aws-lambda/target/meeting-lambda-0.0.1-SNAPSHOT.jar");
+                "/Users/aztecrex/Code/java-translatebot/app/target/translatebot-app-0.0.1-SNAPSHOT.jar");
 
         final ByteBuffer jarbuf;
         try (FileChannel jarch = FileChannel.open(jarfile.toPath(), StandardOpenOption.READ)) {

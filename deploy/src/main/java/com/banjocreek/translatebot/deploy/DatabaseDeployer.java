@@ -1,4 +1,4 @@
-package com.banjocreek.meeting.deploy;
+package com.banjocreek.translatebot.deploy;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;

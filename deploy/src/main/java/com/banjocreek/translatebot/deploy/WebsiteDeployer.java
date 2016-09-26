@@ -1,4 +1,4 @@
-package com.banjocreek.meeting.deploy;
+package com.banjocreek.translatebot.deploy;
 
 import java.io.IOException;
 import java.io.InputStream;
