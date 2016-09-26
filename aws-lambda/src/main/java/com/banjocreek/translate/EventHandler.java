@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -29,20 +30,29 @@ public class EventHandler {
         return m -> Optional.ofNullable(m.get(key));
     }
 
-    private static final String GregToken = "xoxp-76454819904-76454679222-83673130469-99853824512c2ed758f83cf2f7b9ba5b";
-
     private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<>();
     private final AtomicReference<DBValueRetriever> botToken = new AtomicReference<>();
 
-    // private final String Token = "U3TUKFx27sL8zJnSu49ivl3Z";
+    private final ConcurrentHashMap<String, DBValueRetriever> users = new ConcurrentHashMap<>();
 
-    // this needs to go into a DB
-//    private static final String BotToken = "xoxb-83677101745-nSYXqzOy4wtDM1uDC8WbEcnf";
+    private String fetch(String key, String id, ConcurrentHashMap<String, DBValueRetriever> values) {
+        if (!values.containsKey(key))
+            values.putIfAbsent(key, new DBValueRetriever(id));
+        return values.get(key).get();
+    }
 
     private String fetch(String id, AtomicReference<DBValueRetriever> retriever) {
         if (retriever.get() == null)
             retriever.compareAndSet(null, new DBValueRetriever(id));
         return retriever.get().get();
+    }
+
+    private Optional<String> utoken(String userId) {
+        try {
+            return Optional.of(fetch(userId, "user:" + userId + ":token", users));
+        } catch (Exception x) {
+            return Optional.empty();
+        }
     }
 
     private String vtoken() {
@@ -52,7 +62,7 @@ public class EventHandler {
     private String btoken() {
         return fetch("global:bottoken", botToken);
     }
-    
+
     public Map<String, String> handle(final Map<String, Object> envelope) {
 
         System.out.println("Entering handler");
@@ -105,13 +115,13 @@ public class EventHandler {
         final String text = ev.get("text");
         final String channel = ev.get("channel");
         final String timestamp = ev.get("ts");
+        final String userId = ev.get("user");
 
         final String altText = text + "\n" + "_In en: " + text + "_";
 
-        boolean updated = updateMessage(channel, timestamp, altText);
+        boolean updated = updateMessage(userId, channel, timestamp, altText);
 
         if (!updated) {
-            final String userId = ev.get("user");
             final String userName = fetchUsername(userId).orElse("Somebody");
 
             final String botText = "_" + userName + " says, \"" + ev.get("text") + "\"_";
@@ -168,9 +178,12 @@ public class EventHandler {
         }
     }
 
-    private boolean updateMessage(final String channel, String timestamp, final String text) {
+    private boolean updateMessage(final String userId, final String channel, String timestamp, final String text) {
+        final Optional<String> maybeUserToken = utoken(userId);
+        if (!maybeUserToken.isPresent()) 
+            return false;
         final HashMap<String, String> params = new HashMap<>();
-        params.put("token", GregToken);
+        params.put("token", maybeUserToken.get());
         params.put("text", text);
         params.put("channel", channel);
         params.put("ts", timestamp);
