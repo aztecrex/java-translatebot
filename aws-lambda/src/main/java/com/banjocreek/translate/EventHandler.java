@@ -11,8 +11,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -27,6 +29,8 @@ import javax.json.JsonObject;
 
 public class EventHandler {
 
+    private static final List<String> Languages = Arrays.asList("en", "es", "fr");
+
     private static <K, V> Function<Map<K, V>, Optional<V>> field(final K key) {
         return m -> Optional.ofNullable(m.get(key));
     }
@@ -34,6 +38,7 @@ public class EventHandler {
     private final AtomicReference<DBValueRetriever> botToken = new AtomicReference<>();
     // TODO make this a map per team and create a configuration command
     private final AtomicReference<DBValueRetriever> googleToken = new AtomicReference<>();
+
     private final ConcurrentHashMap<String, DBValueRetriever> users = new ConcurrentHashMap<>();
 
     private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<>();
@@ -149,23 +154,22 @@ public class EventHandler {
         final String timestamp = ev.get("ts");
         final String userId = ev.get("user");
 
-        final String target = "es";
-        final Optional<String> maybeTranslated = translate(target, text);
-        if (!maybeTranslated.isPresent()) {
-            System.out.println("no translation retrieved");
-            return;
-        }
-        final String translated = maybeTranslated.get();
+        final List<Pair<String, String>> translations = Languages.stream()
+                .map(l -> Pair.create(l, translate(l, text)))
+                .filter(p -> p._2.isPresent())
+                .map(p -> Pair.create(p._1, p._2.get()))
+                .collect(Collectors.toList());
 
-        final String altText = text + "\n" + "_In " + target + ": " + translated + "_";
+        final String altText = text + "\n"
+                + translations.stream().map(p -> "_In " + p._1 + ": " + p._2 + "_").collect(Collectors.joining("\n"));
 
         final boolean updated = updateMessage(userId, channel, timestamp, altText);
 
         if (!updated) {
             final String userName = fetchUsername(userId).orElse("Somebody");
 
-            final String botText = "_" + userName + " says (" + target + "), \"" + translated + "\"_";
-            postMessage(channel, botText);
+            translations.stream().map(p -> "_" + userName + " says (" + p._1 + "), \"" + p._2 + "\"_").forEach(
+                    x -> postMessage(channel, x));
 
         }
     }
@@ -330,6 +334,22 @@ public class EventHandler {
 
     private String vtoken() {
         return fetch("global:callbacktoken", this.verificationToken);
+    }
+
+    public static final class Pair<T1, T2> {
+        public static <TT1, TT2> Pair<TT1, TT2> create(final TT1 t1, final TT2 t2) {
+            return new Pair<>(t1, t2);
+        }
+
+        public final T1 _1;
+
+        public final T2 _2;
+
+        private Pair(final T1 t1, final T2 t2) {
+            this._1 = t1;
+            this._2 = t2;
+        }
+
     }
 
 }
