@@ -255,7 +255,8 @@ public class EventHandler {
                                 if (moveOn) {
                                     if (translation.containsKey("translatedText")) {
                                         final String translatedText = translation.getString("translatedText");
-                                        return Optional.of(translatedText);
+                                        final String correctedText = translatedText.replaceAll("&#39;", "'");
+                                        return Optional.of(correctedText);
                                     }
                                 }
                             }
