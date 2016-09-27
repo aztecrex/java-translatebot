@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -25,8 +26,6 @@ public class CommandHandler {
 
     private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<DBValueRetriever>();
 
-    private final AtomicReference<DBValueRetriever> googleToken = new AtomicReference<DBValueRetriever>();
-
     private final AtomicReference<LanguageRetriever> supportedLanguages = new AtomicReference<>();
 
     private static final String TableName = "TranslateSlack";
@@ -39,16 +38,36 @@ public class CommandHandler {
 
         String rawCommand = in.get("text").trim();
         String[] command = rawCommand.split(" +");
+
+        final String team = in.get("team_id");
+
         if (command.length == 0 || command[0].equals("help")) {
             return Collections.singletonMap("text",
                     "_add languages to channel:_ /borges add <lang> ...\n"
                             + "_remove languages from channel:_ /borges remove <lang> ...\n"
                             + "_list supported languages:_ /borges languages\n"
-                            + "_show channel configuration:_ /borges show");
+                            + "_show channel configuration:_ /borges show\n"
+                            + "_configure google translate api token:_ /borges configure <google-auth-token>");
         }
 
+        if (command[0].equals("configure")) {
+            if (command.length < 2) {
+                return Collections.singletonMap("text", "_usage_: /borges configure <google-auth-token>");
+            }
+            setTeamConfiguration(team, command[1]);
+            return Collections.singletonMap("text", "configured");
+        }
+
+        Optional<String> maybeGoogleToken = googleToken(team);
+        if (!maybeGoogleToken.isPresent()) {
+            return Collections.singletonMap("text",
+                    "You need to configure your Google Translate API Credentials, try /borges help");
+        }
+
+        final String googleToken = maybeGoogleToken.get();
+
         String channel = in.get("channel_id");
-        final Set<String> languages = languages();
+        final Set<String> languages = languages(googleToken);
         if (command[0].equals("add") || command[0].equals("remove")) {
             final ArrayList<String> inlangs = new ArrayList<>();
             for (int i = 1; i < command.length; ++i) {
@@ -83,6 +102,17 @@ public class CommandHandler {
 
     }
 
+    private void setTeamConfiguration(String team, String authToken) {
+
+        final String id = "team:" + team + ":googletoken";
+        final HashMap<String, AttributeValue> item = new HashMap<>();
+        final String value = authToken;
+        item.put("id", new AttributeValue(id));
+        item.put("value", new AttributeValue(value));
+        PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
+        ddb.putItem(putItemRequest);
+    }
+
     private void setChannelLanguages(String channel, HashSet<String> curlangs) {
 
         final String id = "channel:" + channel + ":languages";
@@ -112,36 +142,18 @@ public class CommandHandler {
         return Arrays.asList(maybeValue.get().trim().split(" +"));
     }
 
-    private Set<String> languages() {
-        return LanguageRetriever.fetch(gtoken(), supportedLanguages);
+    private Set<String> languages(String authToken) {
+        return LanguageRetriever.fetch(authToken, supportedLanguages);
     }
 
-    /*
-     * 
-     * token=gIkuvaNzQIHg97ATvDxqgjtO
-     * 
-     * team_id=T0001
-     * 
-     * team_domain=example
-     * 
-     * channel_id=C2147483705
-     * 
-     * channel_name=test
-     * 
-     * user_id=U2147483697
-     * 
-     * user_name=Steve
-     * 
-     * command=/weather
-     * 
-     * text=94070
-     * 
-     * response_url=https://hooks.slack.com/commands/1234/5678
-     * 
-     */
-
-    private String gtoken() {
-        return DBValueRetriever.fetch("global:googletoken", this.googleToken);
+    private Optional<String> googleToken(String team) {
+        final String id = "team:" + team + ":googletoken";
+        final GetItemRequest getItemRequest = new GetItemRequest()
+                .withAttributesToGet(Collections.singletonList("value"))
+                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
+                .withTableName(TableName);
+        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
+        return Optional.ofNullable(getItemResult.getItem()).map(i -> i.get("value")).map(AttributeValue::getS);
     }
 
     private String vtoken() {
