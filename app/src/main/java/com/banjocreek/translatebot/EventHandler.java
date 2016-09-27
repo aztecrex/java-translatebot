@@ -88,17 +88,26 @@ public class EventHandler {
     }
 
     private String fetch(final String id, final AtomicReference<DBValueRetriever> retriever) {
-        if (retriever.get() == null) {
-            retriever.compareAndSet(null, new DBValueRetriever(id));
+        while (true) {
+            final DBValueRetriever cur = retriever.get();
+            if (cur == null) {
+                final DBValueRetriever proposed = new DBValueRetriever(id);
+                if (retriever.compareAndSet(null, proposed)) {
+                    return proposed.get();
+                }
+            } else {
+                return cur.get();
+            }
         }
-        return retriever.get().get();
     }
 
     private String fetch(final String key, final String id, final ConcurrentHashMap<String, DBValueRetriever> values) {
-        if (!values.containsKey(key)) {
-            values.putIfAbsent(key, new DBValueRetriever(id));
+        final DBValueRetriever cur = values.get(key);
+        if (cur == null) {
+            return values.putIfAbsent(key, new DBValueRetriever(id)).get();
+        } else {
+            return cur.get();
         }
-        return values.get(key).get();
     }
 
     private Optional<String> fetchUsername(final String userId) {
