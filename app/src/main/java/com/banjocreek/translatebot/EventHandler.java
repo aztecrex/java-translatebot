@@ -84,30 +84,7 @@ public class EventHandler {
     }
 
     private String btoken() {
-        return fetch("global:bottoken", this.botToken);
-    }
-
-    private String fetch(final String id, final AtomicReference<DBValueRetriever> retriever) {
-        while (true) {
-            final DBValueRetriever cur = retriever.get();
-            if (cur == null) {
-                final DBValueRetriever proposed = new DBValueRetriever(id);
-                if (retriever.compareAndSet(null, proposed)) {
-                    return proposed.get();
-                }
-            } else {
-                return cur.get();
-            }
-        }
-    }
-
-    private String fetch(final String key, final String id, final ConcurrentHashMap<String, DBValueRetriever> values) {
-        final DBValueRetriever cur = values.get(key);
-        if (cur == null) {
-            return values.putIfAbsent(key, new DBValueRetriever(id)).get();
-        } else {
-            return cur.get();
-        }
+        return DBValueRetriever.fetch("global:bottoken", this.botToken);
     }
 
     private Optional<String> fetchUsername(final String userId) {
@@ -146,7 +123,7 @@ public class EventHandler {
     }
 
     private String gtoken() {
-        return fetch("global:googletoken", this.googleToken);
+        return DBValueRetriever.fetch("global:googletoken", this.googleToken);
     }
 
     private void handleMessage(final Map<String, String> ev) {
@@ -336,14 +313,14 @@ public class EventHandler {
 
     private Optional<String> utoken(final String userId) {
         try {
-            return Optional.of(fetch(userId, "user:" + userId + ":token", this.users));
+            return Optional.of(DBValueRetriever.fetch(userId, "user:" + userId + ":token", this.users));
         } catch (final Exception x) {
             return Optional.empty();
         }
     }
 
     private String vtoken() {
-        return fetch("global:callbacktoken", this.verificationToken);
+        return DBValueRetriever.fetch("global:callbacktoken", this.verificationToken);
     }
 
     public static final class Pair<T1, T2> {

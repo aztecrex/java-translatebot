@@ -1,24 +1,47 @@
 package com.banjocreek.translatebot;
 
 import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 
-public class DBValueRetriever {
+public final class DBValueRetriever {
 
     private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
 
     private static final String TableName = "TranslateSlack";
 
+    public static String fetch(final String id, final AtomicReference<DBValueRetriever> retriever) {
+        while (true) {
+            final DBValueRetriever cur = retriever.get();
+            if (cur == null) {
+                final DBValueRetriever proposed = new DBValueRetriever(id);
+                if (retriever.compareAndSet(null, proposed))
+                    return proposed.get();
+            } else
+                return cur.get();
+        }
+    }
+
+    public static String fetch(final String key, final String id,
+            final ConcurrentHashMap<String, DBValueRetriever> values) {
+        final DBValueRetriever cur = values.get(key);
+        if (cur == null)
+            return values.putIfAbsent(key, new DBValueRetriever(id)).get();
+        else
+            return cur.get();
+    }
+
     private boolean fired = false;
-
     private final String id;
-
     private final Object monitor = new Object();
+
     private String v = null;
+
     private RuntimeException x = null;
 
     public DBValueRetriever(final String id) {
