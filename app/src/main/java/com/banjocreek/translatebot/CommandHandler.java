@@ -41,12 +41,12 @@ public class CommandHandler {
         String[] command = rawCommand.split(" +");
         if (command.length == 0 || command[0].equals("help")) {
             return Collections.singletonMap("text",
-                    "_add languages to channel:_ add <lang> ...\n"
-                            + "_remove languages from channel:_ remove <lang> ...\n" + "_list languages:_ languages");
+                    "_add languages to channel:_ /borges add <lang> ...\n"
+                            + "_remove languages from channel:_ /borges remove <lang> ...\n" +
+                            "_list supported languages:_ /borges languages");
         }
 
         String channel = in.get("channel_id");
-        // String team = in.get("team_id");
         final Set<String> languages = languages();
         if (command[0].equals("add") || command[0].equals("remove")) {
             final ArrayList<String> inlangs = new ArrayList<>();
@@ -80,8 +80,7 @@ public class CommandHandler {
         final String value = curlangs.stream().collect(Collectors.joining(" "));
         item.put("id", new AttributeValue(id));
         item.put("value", new AttributeValue(value));
-        PutItemRequest putItemRequest = new PutItemRequest().withItem(item)
-                .withTableName(TableName);
+        PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
         ddb.putItem(putItemRequest);
     }
 
