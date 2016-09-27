@@ -12,6 +12,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -27,9 +28,12 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 
-public class EventHandler {
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
+import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 
-    private static final List<String> Languages = Arrays.asList("en", "es", "fr");
+public class EventHandler {
 
     private static <K, V> Function<Map<K, V>, Optional<V>> field(final K key) {
         return m -> Optional.ofNullable(m.get(key));
@@ -42,6 +46,8 @@ public class EventHandler {
     private final ConcurrentHashMap<String, DBValueRetriever> users = new ConcurrentHashMap<>();
 
     private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<>();
+    private static final String TableName = "TranslateSlack";
+    private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
 
     public Map<String, String> handle(final Map<String, Object> envelope) {
 
@@ -140,7 +146,7 @@ public class EventHandler {
         final String timestamp = ev.get("ts");
         final String userId = ev.get("user");
 
-        final List<Pair<String, String>> translations = Languages.stream()
+        final List<Pair<String, String>> translations = fetchChannelLanguages(channel).stream()
                 .map(l -> Pair.create(l, translate(l, text)))
                 .filter(p -> p._2.isPresent())
                 .map(p -> Pair.create(p._1, p._2.get()))
@@ -321,6 +327,23 @@ public class EventHandler {
 
     private String vtoken() {
         return DBValueRetriever.fetch("global:callbacktoken", this.verificationToken);
+    }
+
+    private Collection<String> fetchChannelLanguages(String channel) {
+
+        final String id = "channel:" + channel + ":languages";
+        final GetItemRequest getItemRequest = new GetItemRequest()
+                .withAttributesToGet(Collections.singletonList("value"))
+                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
+                .withTableName(TableName);
+        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
+        Optional<String> maybeValue = Optional.ofNullable(getItemResult.getItem())
+                .map(i -> i.get("value"))
+                .map(AttributeValue::getS);
+        if (!maybeValue.isPresent())
+            return Collections.emptyList();
+
+        return Arrays.asList(maybeValue.get().trim().split(" +"));
     }
 
     public static final class Pair<T1, T2> {
