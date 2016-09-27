@@ -42,8 +42,9 @@ public class CommandHandler {
         if (command.length == 0 || command[0].equals("help")) {
             return Collections.singletonMap("text",
                     "_add languages to channel:_ /borges add <lang> ...\n"
-                            + "_remove languages from channel:_ /borges remove <lang> ...\n" +
-                            "_list supported languages:_ /borges languages");
+                            + "_remove languages from channel:_ /borges remove <lang> ...\n"
+                            + "_list supported languages:_ /borges languages\n"
+                            + "_show channel configuration:_ /borges show");
         }
 
         String channel = in.get("channel_id");
@@ -65,6 +66,10 @@ public class CommandHandler {
             return Collections.singletonMap("text", resp);
         } else if (command[0].equals("languages")) {
             final String resp = new TreeSet<>(languages).stream().collect(Collectors.joining("\n"));
+            return Collections.singletonMap("text", resp);
+        } else if (command[0].equals("show")) {
+            final String resp = "currently translating: "
+                    + fetchChannelLanguages(channel).stream().collect(Collectors.joining(" "));
             return Collections.singletonMap("text", resp);
         } else {
             return Collections.singletonMap("text", "unrecognized subcommand '" + command[0] + "'");
