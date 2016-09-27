@@ -1,2 +1,2 @@
-# Meeting Requester
+# Translator Slackbot
 
