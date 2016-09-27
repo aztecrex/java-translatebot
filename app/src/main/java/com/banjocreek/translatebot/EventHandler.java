@@ -40,8 +40,6 @@ public class EventHandler {
     }
 
     private final AtomicReference<DBValueRetriever> botToken = new AtomicReference<>();
-    // TODO make this a map per team and create a configuration command
-    private final AtomicReference<DBValueRetriever> googleToken = new AtomicReference<>();
 
     private final ConcurrentHashMap<String, DBValueRetriever> users = new ConcurrentHashMap<>();
 
@@ -73,7 +71,7 @@ public class EventHandler {
         System.out.println("Not a URL verification");
 
         final Optional<Map<String, String>> maybeEvent = field("event").apply(envelope).map(Map.class::cast);
-
+        final String team = (String) envelope.get("team_id");
         System.out.println("Might have an event: " + maybeEvent.isPresent());
 
         maybeEvent.ifPresent(ev -> {
@@ -81,7 +79,7 @@ public class EventHandler {
             switch (ev.get("type")) {
             case "message":
                 System.out.println("Type is Message, dispatching...");
-                handleMessage(ev);
+                handleMessage(team, ev);
                 break;
             }
         });
@@ -128,11 +126,7 @@ public class EventHandler {
 
     }
 
-    private String gtoken() {
-        return DBValueRetriever.fetch("global:googletoken", this.googleToken);
-    }
-
-    private void handleMessage(final Map<String, String> ev) {
+    private void handleMessage(final String team, final Map<String, String> ev) {
 
         System.out.println("In message handler");
 
@@ -146,8 +140,19 @@ public class EventHandler {
         final String timestamp = ev.get("ts");
         final String userId = ev.get("user");
 
+        final Collection<String> channelLanguages = fetchChannelLanguages(channel);
+        if (channelLanguages.isEmpty()) {
+            return;
+        }
+
+        Optional<String> maybeGoogleToken = googleToken(team);
+        if (!maybeGoogleToken.isPresent()) {
+            System.err.println("team '" + team + "' does not have google token set");
+            return;
+        }
+
         final List<Pair<String, String>> translations = fetchChannelLanguages(channel).stream()
-                .map(l -> Pair.create(l, translate(l, text)))
+                .map(l -> Pair.create(l, translate(maybeGoogleToken.get(), l, text)))
                 .filter(p -> p._2.isPresent())
                 .map(p -> Pair.create(p._1, p._2.get()))
                 .collect(Collectors.toList());
@@ -211,10 +216,10 @@ public class EventHandler {
         return maybeValue.filter(match::equals).isPresent();
     }
 
-    private Optional<String> translate(final String target, final String text) {
+    private Optional<String> translate(final String authToken, final String target, final String text) {
 
         final HashMap<String, String> params = new HashMap<>();
-        params.put("key", gtoken());
+        params.put("key", authToken);
         params.put("target", target);
         params.put("q", text);
 
@@ -344,6 +349,16 @@ public class EventHandler {
             return Collections.emptyList();
 
         return Arrays.asList(maybeValue.get().trim().split(" +"));
+    }
+
+    private Optional<String> googleToken(String team) {
+        final String id = "team:" + team + ":googletoken";
+        final GetItemRequest getItemRequest = new GetItemRequest()
+                .withAttributesToGet(Collections.singletonList("value"))
+                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
+                .withTableName(TableName);
+        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
+        return Optional.ofNullable(getItemResult.getItem()).map(i -> i.get("value")).map(AttributeValue::getS);
     }
 
     public static final class Pair<T1, T2> {
