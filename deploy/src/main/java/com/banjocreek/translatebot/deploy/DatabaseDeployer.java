@@ -14,23 +14,18 @@ public class DatabaseDeployer {
 
     public void deploy() {
 
-        AttributeDefinition idAttr = new AttributeDefinition().withAttributeName("id")
+        final AttributeDefinition idAttr = new AttributeDefinition().withAttributeName("id")
                 .withAttributeType(ScalarAttributeType.S);
-        ProvisionedThroughput throughput = new   ProvisionedThroughput()
-                .withReadCapacityUnits(5L)
-                .withWriteCapacityUnits(5L)
-                ;
-        
-        
-        KeySchemaElement idKey = new KeySchemaElement()
-                .withAttributeName("id")
-                .withKeyType(KeyType.HASH);
-        
-        CreateTableRequest createTableRequest = new CreateTableRequest().withTableName("TranslateSlack")
+        final ProvisionedThroughput throughput = new ProvisionedThroughput().withReadCapacityUnits(5L)
+                .withWriteCapacityUnits(5L);
+
+        final KeySchemaElement idKey = new KeySchemaElement().withAttributeName("id").withKeyType(KeyType.HASH);
+
+        final CreateTableRequest createTableRequest = new CreateTableRequest().withTableName("TranslateSlack")
                 .withAttributeDefinitions(idAttr)
                 .withKeySchema(idKey)
                 .withProvisionedThroughput(throughput);
-                ;
+        ;
         ;
 
         ddb.createTable(createTableRequest);

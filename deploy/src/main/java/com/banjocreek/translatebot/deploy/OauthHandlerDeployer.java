@@ -38,17 +38,17 @@ import com.amazonaws.services.lambda.model.Runtime;
 import com.amazonaws.services.lambda.model.UpdateFunctionCodeRequest;
 
 public class OauthHandlerDeployer {
-    private static final String HandlerSpec = "com.banjocreek.translatebot.OauthHandler::handle";
-
-    private static final String Path = "auth";
-
-    private static final Random rng = new SecureRandom();
-
     private static final String ApiName = "TranslatorSlackOauth";
 
     private static final String FunctionName = "TranslatorSlackOauth";
 
+    private static final String HandlerSpec = "com.banjocreek.translatebot.OauthHandler::handle";
+
     private static final String HttpMethod = "GET";
+
+    private static final String Path = "auth";
+
+    private static final Random rng = new SecureRandom();
 
     private final AmazonApiGatewayClient awsApiClient = new AmazonApiGatewayClient();
 
@@ -66,6 +66,15 @@ public class OauthHandlerDeployer {
 
         deleteApi();
         deleteFunction();
+
+    }
+
+    public void updateFunction() {
+
+        final UpdateFunctionCodeRequest ufrq = new UpdateFunctionCodeRequest().withFunctionName(FunctionName)
+                .withZipFile(loadJar());
+
+        this.awsLambdaClient.updateFunctionCode(ufrq);
 
     }
 
@@ -115,17 +124,18 @@ public class OauthHandlerDeployer {
 
     }
 
-    private void createMethod(final CreateRestApiResult createApiResult, final CreateResourceResult crrs, String iarn) {
+    private void createMethod(final CreateRestApiResult createApiResult, final CreateResourceResult crrs,
+            final String iarn) {
         final HashMap<String, Boolean> params = new HashMap<>();
         params.put("method.request.querystring.code", true);
         params.put("method.request.querystring.state", false);
-        PutMethodRequest pmrq = new PutMethodRequest().withRestApiId(createApiResult.getId())
+        final PutMethodRequest pmrq = new PutMethodRequest().withRestApiId(createApiResult.getId())
                 .withResourceId(crrs.getId())
                 .withHttpMethod(HttpMethod)
                 .withRequestParameters(params)
                 .withAuthorizationType("NONE");
-        awsApiClient.putMethod(pmrq);
-        String tplt = "{\"code\":\"$input.params('code')\",\"state\":\"$input.params('state')\"}";
+        this.awsApiClient.putMethod(pmrq);
+        final String tplt = "{\"code\":\"$input.params('code')\",\"state\":\"$input.params('state')\"}";
         final PutIntegrationRequest pirq = new PutIntegrationRequest().withType(IntegrationType.AWS)
                 .withRestApiId(createApiResult.getId())
                 .withResourceId(crrs.getId())
@@ -190,7 +200,7 @@ public class OauthHandlerDeployer {
         final DeleteFunctionRequest dlfrq = new DeleteFunctionRequest().withFunctionName(FunctionName);
         try {
             this.awsLambdaClient.deleteFunction(dlfrq);
-        } catch (ResourceNotFoundException rnfx) {
+        } catch (final ResourceNotFoundException rnfx) {
             // it is ok if the resource is not there, we simply succeed
         }
 
@@ -214,6 +224,11 @@ public class OauthHandlerDeployer {
         return "arn:aws:iam::299766559344:role/service-role/LambdaExplorerRole";
     }
 
+    private FunctionCode loadCode() {
+
+        return new FunctionCode().withZipFile(loadJar());
+    }
+
     private ByteBuffer loadJar() {
         final File jarfile = new File(
                 "/Users/aztecrex/Code/java-translatebot/app/target/translatebot-app-0.0.1-SNAPSHOT.jar");
@@ -230,11 +245,6 @@ public class OauthHandlerDeployer {
             throw new RuntimeException("cannot load jar", iox);
         }
         return jarbuf;
-    }
-
-    private FunctionCode loadCode() {
-
-        return new FunctionCode().withZipFile(loadJar());
     }
 
     private void permitInvokeLambda(final String accountId, final CreateRestApiResult createApiResult,
@@ -257,15 +267,6 @@ public class OauthHandlerDeployer {
         final CreateDeploymentRequest cdrq = new CreateDeploymentRequest().withRestApiId(createApiResult.getId())
                 .withStageName("advance");
         return this.awsApiClient.createDeployment(cdrq);
-    }
-
-    public void updateFunction() {
-
-        final UpdateFunctionCodeRequest ufrq = new UpdateFunctionCodeRequest().withFunctionName(FunctionName)
-                .withZipFile(loadJar());
-
-        awsLambdaClient.updateFunctionCode(ufrq);
-
     }
 
 }

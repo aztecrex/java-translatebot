@@ -29,6 +29,10 @@ import com.amazonaws.services.dynamodbv2.model.WriteRequest;
 
 public class OauthHandler {
 
+    private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
+
+    private static final String TableName = "TranslateSlack";
+
     public final Map<String, Object> handle(final Map<String, String> in) {
 
         final Map<String, String> authData = generateOutput(in);
@@ -55,41 +59,6 @@ public class OauthHandler {
             return Collections.singletonMap("error", x.getMessage());
         }
 
-    }
-
-    private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
-    private static final String TableName = "TranslateSlack";
-
-    private void storeResult(Map<String, Object> result) {
-        final String userId = (String) result.get("user_id");
-        final String userToken = (String) result.get("access_token");
-        @SuppressWarnings("unchecked")
-        final Map<String, Object> bot = (Map<String, Object>) result.get("bot");
-        final String botToken = (String) bot.get("bot_access_token");
-
-        ArrayList<PutRequest> putRequests = new ArrayList<>();
-        final HashMap<String, AttributeValue> userItem = new HashMap<>();
-        userItem.put("id", new AttributeValue("user:" + userId + ":token"));
-        userItem.put("value", new AttributeValue(userToken));
-        putRequests.add(new PutRequest().withItem(userItem));
-
-        final HashMap<String, AttributeValue> botItem = new HashMap<>();
-        botItem.put("id", new AttributeValue("global:bottoken"));
-        botItem.put("value", new AttributeValue(botToken));
-        putRequests.add(new PutRequest().withItem(botItem));
-
-        final List<WriteRequest> writeRequests = putRequests.stream()
-                .map(WriteRequest::new)
-                .collect(Collectors.toList());
-        HashMap<String, List<WriteRequest>> requestItems = new HashMap<>();
-        requestItems.put(TableName, writeRequests);
-        final BatchWriteItemRequest batchWriteItemRequest = new BatchWriteItemRequest().withRequestItems(requestItems);
-
-        ddb.batchWriteItem(batchWriteItemRequest);
-    }
-
-    private final String urlEncode(final Map<String, String> params) {
-        return params.entrySet().stream().map(this::param).collect(Collectors.joining("&"));
     }
 
     private Map<String, String> generateOutput(final Map<String, String> in) {
@@ -142,6 +111,38 @@ public class OauthHandler {
         default:
             throw new RuntimeException("unexpected json type");
         }
+    }
+
+    private void storeResult(final Map<String, Object> result) {
+        final String userId = (String) result.get("user_id");
+        final String userToken = (String) result.get("access_token");
+        @SuppressWarnings("unchecked")
+        final Map<String, Object> bot = (Map<String, Object>) result.get("bot");
+        final String botToken = (String) bot.get("bot_access_token");
+
+        final ArrayList<PutRequest> putRequests = new ArrayList<>();
+        final HashMap<String, AttributeValue> userItem = new HashMap<>();
+        userItem.put("id", new AttributeValue("user:" + userId + ":token"));
+        userItem.put("value", new AttributeValue(userToken));
+        putRequests.add(new PutRequest().withItem(userItem));
+
+        final HashMap<String, AttributeValue> botItem = new HashMap<>();
+        botItem.put("id", new AttributeValue("global:bottoken"));
+        botItem.put("value", new AttributeValue(botToken));
+        putRequests.add(new PutRequest().withItem(botItem));
+
+        final List<WriteRequest> writeRequests = putRequests.stream()
+                .map(WriteRequest::new)
+                .collect(Collectors.toList());
+        final HashMap<String, List<WriteRequest>> requestItems = new HashMap<>();
+        requestItems.put(TableName, writeRequests);
+        final BatchWriteItemRequest batchWriteItemRequest = new BatchWriteItemRequest().withRequestItems(requestItems);
+
+        ddb.batchWriteItem(batchWriteItemRequest);
+    }
+
+    private final String urlEncode(final Map<String, String> params) {
+        return params.entrySet().stream().map(this::param).collect(Collectors.joining("&"));
     }
 
 }

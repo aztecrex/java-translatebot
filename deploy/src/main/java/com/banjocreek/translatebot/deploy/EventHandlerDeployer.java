@@ -68,7 +68,7 @@ public class EventHandlerDeployer {
         final UpdateFunctionCodeRequest ufrq = new UpdateFunctionCodeRequest().withFunctionName(FunctionName)
                 .withZipFile(loadJar());
 
-        awsLambdaClient.updateFunctionCode(ufrq);
+        this.awsLambdaClient.updateFunctionCode(ufrq);
 
     }
 
@@ -211,6 +211,11 @@ public class EventHandlerDeployer {
         this.awsApiClient.putMethodResponse(pmrsrq);
     }
 
+    private FunctionCode loadCode() {
+
+        return new FunctionCode().withZipFile(loadJar());
+    }
+
     private ByteBuffer loadJar() {
         final File jarfile = new File(
                 "/Users/aztecrex/Code/java-translatebot/app/target/translatebot-app-0.0.1-SNAPSHOT.jar");
@@ -227,11 +232,6 @@ public class EventHandlerDeployer {
             throw new RuntimeException("cannot load jar", iox);
         }
         return jarbuf;
-    }
-
-    private FunctionCode loadCode() {
-
-        return new FunctionCode().withZipFile(loadJar());
     }
 
     private void permitInvokeLambda(final String accountId, final CreateRestApiResult createApiResult,

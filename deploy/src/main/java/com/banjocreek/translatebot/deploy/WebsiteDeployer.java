@@ -26,20 +26,20 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 
 public class WebsiteDeployer {
 
+    private static final String BucketName, Domain;
+
     private static final String SignupObjectName = "signup.html";
 
     private static final String Tld = "banjocreek.io";
-
-    private static final String BucketName, Domain;
 
     static {
         Domain = "translate." + Tld;
         BucketName = Domain;
     }
 
-    private final AmazonS3Client s3 = new AmazonS3Client();
-
     private final AmazonRoute53Client route53 = new AmazonRoute53Client();
+
+    private final AmazonS3Client s3 = new AmazonS3Client();
 
     public void deploy() {
 
@@ -48,20 +48,20 @@ public class WebsiteDeployer {
          * it. Amazon could give the name to someone else. This won't matter
          * when we move CDN.
          */
-        final Optional<Bucket> maybeBucket = s3.listBuckets()
+        final Optional<Bucket> maybeBucket = this.s3.listBuckets()
                 .stream()
                 .filter(b -> b.getName().equals(BucketName))
                 .findAny();
         if (!maybeBucket.isPresent()) {
-            s3.createBucket(new CreateBucketRequest(BucketName));
+            this.s3.createBucket(new CreateBucketRequest(BucketName));
         }
 
-        s3.setBucketWebsiteConfiguration(BucketName, new BucketWebsiteConfiguration("index.html"));
+        this.s3.setBucketWebsiteConfiguration(BucketName, new BucketWebsiteConfiguration("index.html"));
 
         /*
          * Zone must exist
          */
-        HostedZone zone = route53.listHostedZonesByName(new ListHostedZonesByNameRequest().withDNSName(Tld))
+        final HostedZone zone = this.route53.listHostedZonesByName(new ListHostedZonesByNameRequest().withDNSName(Tld))
                 .getHostedZones()
                 .stream()
                 .findAny()
@@ -79,34 +79,39 @@ public class WebsiteDeployer {
         final ChangeBatch changeBatch = new ChangeBatch().withChanges(changes);
         final ChangeResourceRecordSetsRequest changeRecordsRequest = new ChangeResourceRecordSetsRequest()
                 .withHostedZoneId(zoneId).withChangeBatch(changeBatch);
-        route53.changeResourceRecordSets(changeRecordsRequest);
+        this.route53.changeResourceRecordSets(changeRecordsRequest);
 
         final ObjectMetadata objMetadata = new ObjectMetadata();
         objMetadata.setContentType("text/html");
         try (InputStream is = this.getClass().getResourceAsStream(SignupObjectName)) {
-            final PutObjectRequest putObjectRequest = new PutObjectRequest(BucketName, SignupObjectName, is, objMetadata);
-            s3.putObject(putObjectRequest);
-        } catch (IOException e) {
+            final PutObjectRequest putObjectRequest = new PutObjectRequest(BucketName,
+                    SignupObjectName,
+                    is,
+                    objMetadata);
+            this.s3.putObject(putObjectRequest);
+        } catch (final IOException e) {
             throw new RuntimeException("cannot upload signup", e);
         }
 
-        s3.setObjectAcl(BucketName, SignupObjectName, CannedAccessControlList.PublicRead);
-        
-        
+        this.s3.setObjectAcl(BucketName, SignupObjectName, CannedAccessControlList.PublicRead);
+
     }
 
     public void update() {
-        
+
         final ObjectMetadata objMetadata = new ObjectMetadata();
         objMetadata.setContentType("text/html");
         try (InputStream is = this.getClass().getResourceAsStream(SignupObjectName)) {
-            final PutObjectRequest putObjectRequest = new PutObjectRequest(BucketName, SignupObjectName, is, objMetadata);
-            s3.putObject(putObjectRequest);
-        } catch (IOException e) {
+            final PutObjectRequest putObjectRequest = new PutObjectRequest(BucketName,
+                    SignupObjectName,
+                    is,
+                    objMetadata);
+            this.s3.putObject(putObjectRequest);
+        } catch (final IOException e) {
             throw new RuntimeException("cannot upload signup", e);
         }
 
-        s3.setObjectAcl(BucketName, SignupObjectName, CannedAccessControlList.PublicRead);
+        this.s3.setObjectAcl(BucketName, SignupObjectName, CannedAccessControlList.PublicRead);
     }
-    
+
 }
