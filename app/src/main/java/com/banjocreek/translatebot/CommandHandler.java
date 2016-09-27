@@ -68,8 +68,14 @@ public class CommandHandler {
             final String resp = new TreeSet<>(languages).stream().collect(Collectors.joining("\n"));
             return Collections.singletonMap("text", resp);
         } else if (command[0].equals("show")) {
-            final String resp = "currently translating: "
-                    + fetchChannelLanguages(channel).stream().collect(Collectors.joining(" "));
+            final Collection<String> current = fetchChannelLanguages(channel);
+            final String resp;
+            if (current.isEmpty()) {
+                resp = "not translating in this channel, use _/borges add <lang> ..._ to add languages";
+            } else {
+                resp = "currently translating: "
+                        + fetchChannelLanguages(channel).stream().collect(Collectors.joining(" "));
+            }
             return Collections.singletonMap("text", resp);
         } else {
             return Collections.singletonMap("text", "unrecognized subcommand '" + command[0] + "'");
