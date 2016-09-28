@@ -25,4 +25,5 @@
 
 - marks message as edited even when no translation added
 
+- better landing page after authorizing
 
