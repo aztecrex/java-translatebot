@@ -63,10 +63,13 @@ public class OauthHandler {
 
     private Map<String, String> generateOutput(final Map<String, String> in) {
 
+        final String clientId = new DBValueRetriever("global:clientid").get();
+        final String clientSecret = new DBValueRetriever("global:clientsecret").get();
+
         final HashMap<String, String> rval = new HashMap<>();
         rval.put("code", in.get("code"));
-        rval.put("client_id", "76454819904.83569102723");
-        rval.put("client_secret", "8217a395d876bb8a367c9379cac2a7e4");
+        rval.put("client_id", clientId);
+        rval.put("client_secret", clientSecret);
         return Collections.unmodifiableMap(rval);
     }
 

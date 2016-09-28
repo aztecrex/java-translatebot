@@ -2,7 +2,6 @@
 
 ## To do
 
-- do not store client secret in code
 - use bot to display current languages
 - correctly parse messages
   - links
@@ -12,6 +11,7 @@
    - requires that we make a really small dispatcher jar
 - better landing page after authorizing
 - do not uses "In" in the message rewrite
+- implement oauth state
 
 
 ## Done
@@ -23,4 +23,5 @@
 - welcome message when bot joins
 - do not respond to commands when bot is not in channel
    - let user know to invite the bot
+- do not store client secret in code
 
