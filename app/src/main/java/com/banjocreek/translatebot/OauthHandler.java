@@ -57,7 +57,7 @@ public class OauthHandler {
             x.printStackTrace(System.err);
             return Collections.singletonMap("ok", false);
         }
-        return Collections.singletonMap("ok",true);
+        return Collections.singletonMap("ok", true);
 
     }
 

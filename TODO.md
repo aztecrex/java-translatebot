@@ -1,7 +1,6 @@
 # Backlog
 
 - HIGH PRIORITY
-    - implement promo token for translate API
     - implement oauth state
 
 - NOT SO HIGH
