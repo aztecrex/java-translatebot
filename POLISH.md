@@ -3,10 +3,6 @@
 ## To do
 
 - automate latest changes to API gateway !!!!!
-- use bot to display current languages
-- validate google api token before storing
-- quick dispatch to second lambda
-   - requires that we make a really small dispatcher jar
 - implement oauth state
 
 
