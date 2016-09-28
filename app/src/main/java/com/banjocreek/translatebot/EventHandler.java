@@ -151,13 +151,18 @@ public class EventHandler {
 
         System.out.println("In message handler");
 
+        final String channel = ev.get("channel");
+
         if (ev.containsKey("subtype")) {
-            System.out.println("ignoring message with subtype: " + ev.get("subtype"));
+            if (ev.get("subtype").equals("channel_join")) {
+                postMessage(channel, "I am here to translate your messages, type */borges help* for help");
+            } else {
+                System.out.println("ignoring message with subtype: " + ev.get("subtype"));
+            }
             return;
         }
 
         final String text = ev.get("text");
-        final String channel = ev.get("channel");
         final String timestamp = ev.get("ts");
         final String userId = ev.get("user");
 

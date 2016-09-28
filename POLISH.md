@@ -9,7 +9,6 @@
   - links
   - emoji
 - validate google api token before storing
-- welcome message when bot joins
 - quick dispatch to second lambda
    - requires that we make a really small dispatcher jar
 - better landing page after authorizing
@@ -22,4 +21,5 @@
 - condense languages output
 - do not mark message as edited even when no translation added
 - able to remove all languages from channel 
+- welcome message when bot joins
 
