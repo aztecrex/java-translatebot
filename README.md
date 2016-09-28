@@ -39,10 +39,11 @@ commands.
 ## Status
 
 This is prototype all the way. Most of the time spent developing this application was
-experimenting with the myriad services and getting them to play nicely together. So you
-will see a lot of duplicate logic and refactoring opportunities in the source. Since it
-wasn't test driven, it needs to be redesigned using TDD to make it production-ready.
-Depending on the feedback I get, I will decide whether to productionalize it.
+experimenting with the Lambda, API Gateway and Slack services and getting them to play
+nicely together. So you will see a lot of duplicate logic and refactoring opportunities
+in the source. Since it wasn't test driven, it needs to be redesigned using TDD to make
+it production-ready.  Depending on the feedback I get, I will decide whether to
+productionalize it.
 
 ## Run it Yourself
 
