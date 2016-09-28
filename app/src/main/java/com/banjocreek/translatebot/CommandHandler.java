@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -23,10 +21,6 @@ import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 public class CommandHandler {
 
     private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
-
-    private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<DBValueRetriever>();
-
-    private final AtomicReference<LanguageRetriever> supportedLanguages = new AtomicReference<>();
 
     private static final String TableName = "TranslateSlack";
 
@@ -143,7 +137,7 @@ public class CommandHandler {
     }
 
     private Set<String> languages(String authToken) {
-        return LanguageRetriever.fetch(authToken, supportedLanguages);
+        return new LanguageRetriever(authToken).get();
     }
 
     private Optional<String> googleToken(String team) {
@@ -157,6 +151,6 @@ public class CommandHandler {
     }
 
     private String vtoken() {
-        return DBValueRetriever.fetch("global:callbacktoken", this.verificationToken);
+        return new DBValueRetriever("global:callbacktoken").get();
     }
 }

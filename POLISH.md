@@ -21,4 +21,8 @@
    - requires that we make a really small dispatcher jar
 
 
+- cannot remove language when only 1
+
+- marks message as edited even when no translation added
+
 
