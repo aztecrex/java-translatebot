@@ -2,10 +2,8 @@
 
 ## To do
 
+- attribute Google Translate
 - use bot to display current languages
-- correctly parse messages
-  - links
-  - emoji
 - validate google api token before storing
 - quick dispatch to second lambda
    - requires that we make a really small dispatcher jar
@@ -24,4 +22,7 @@
 - do not respond to commands when bot is not in channel
    - let user know to invite the bot
 - do not store client secret in code
+- correctly parse messages  (This is not completely solved yet, what we really need is a way to stop Google from translating the special strings)
+  - links
+  - emoji
 

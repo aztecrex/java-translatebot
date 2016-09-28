@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.json.Json;
@@ -33,9 +35,15 @@ import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 
 public class EventHandler {
 
+    private static final Pattern ApostropheRe = Pattern.compile("&#39;");
+
     private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
 
+    private static final Pattern EmojiRe = Pattern.compile("[\uff1a:] *([A-Z0-9a-z_]+) *[\uff1a:]");
+
     private static final String TableName = "TranslateSlack";
+
+    private static final Pattern UserLinkRe = Pattern.compile("&lt;@ *([A-Z0-9]+)&gt;");
 
     private static <K, V> Function<Map<K, V>, Optional<V>> field(final K key) {
         return m -> Optional.ofNullable(m.get(key));
@@ -84,6 +92,20 @@ public class EventHandler {
     private String botUser(final String teamId) {
         final String id = "team:" + teamId + ":botuser";
         return new DBValueRetriever(id).get();
+    }
+
+    private final String correct(final String t) {
+
+        final Matcher apostropheM = ApostropheRe.matcher(t);
+        final String t1 = apostropheM.find() ? apostropheM.replaceAll("'") : t;
+
+        final Matcher ulinkM = UserLinkRe.matcher(t1);
+        final String t2 = ulinkM.find() ? ulinkM.replaceAll("<@" + ulinkM.group(1) + ">") : t1;
+
+        final Matcher emojiM = EmojiRe.matcher(t2);
+        final String result = emojiM.find() ? emojiM.replaceAll(":" + emojiM.group(1) + ":") : t2;
+
+        return result;
     }
 
     private Collection<String> fetchChannelLanguages(final String channel) {
@@ -222,6 +244,7 @@ public class EventHandler {
         params.put("token", botToken);
         params.put("text", text);
         params.put("channel", channel);
+        params.put("parse", "client");
 
         try {
             final URL u = new URL("https://slack.com/api/chat.postMessage?" + urlEncodeAll(params));
@@ -285,7 +308,7 @@ public class EventHandler {
                                 if (moveOn) {
                                     if (translation.containsKey("translatedText")) {
                                         final String translatedText = translation.getString("translatedText");
-                                        final String correctedText = translatedText.replaceAll("&#39;", "'");
+                                        final String correctedText = correct(translatedText);
                                         return Optional.of(correctedText);
                                     }
                                 }
@@ -305,6 +328,7 @@ public class EventHandler {
 
     private boolean updateMessage(final String userId, final String channel, final String timestamp,
             final String text) {
+        System.out.println("message update is: " + text);
         final Optional<String> maybeUserToken = utoken(userId);
         if (!maybeUserToken.isPresent())
             return false;
@@ -313,6 +337,7 @@ public class EventHandler {
         params.put("text", text);
         params.put("channel", channel);
         params.put("ts", timestamp);
+        params.put("parse", "client");
 
         try {
             final URL u = new URL("https://slack.com/api/chat.update?" + urlEncodeAll(params));
