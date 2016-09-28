@@ -114,7 +114,7 @@ public class CommandHandlerDeployer {
                 .withDescription("Translator Slack event handler")
                 .withFunctionName(FunctionName)
                 .withHandler(EntryPoint)
-                .withMemorySize(512)
+                .withMemorySize(1024)
                 .withTimeout(30)
                 .withPublish(true)
                 .withRole(executionRole)

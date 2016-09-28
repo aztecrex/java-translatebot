@@ -160,8 +160,8 @@ public class OauthHandlerDeployer {
                 .withResourceId(crrs.getId())
                 .withHttpMethod(HttpMethod)
                 .withStatusCode("302")
-                .withResponseParameters(
-                        Collections.singletonMap("method.response.header.Location", "'http://translate.banjocreek.io/thankyou.html'"))
+                .withResponseParameters(Collections.singletonMap("method.response.header.Location",
+                        "'http://translate.banjocreek.io/thankyou.html'"))
                 .withResponseTemplates(Collections.emptyMap());
         this.awsApiClient.putIntegrationResponse(pirsrq);
 

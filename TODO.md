@@ -1,7 +1,6 @@
 # Backlog
 
 - HIGH PRIORITY
-    - bump performance on command and event handlers
     - implement promo token for translate API
     - implement oauth state
 
