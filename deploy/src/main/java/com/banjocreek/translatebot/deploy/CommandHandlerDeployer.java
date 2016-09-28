@@ -45,10 +45,10 @@ public class CommandHandlerDeployer {
 
     private static final String ApiName = "TranslatorSlackCommandHandler";
 
+    private static final String EntryPoint = "com.banjocreek.translatebot.CommandHandler::handle";
+
     private static final String FunctionName = "TranslatorSlackHandleCommands";
 
-    private static final String EntryPoint = "com.banjocreek.translatebot.CommandHandler::handle";
-    
     final AmazonApiGatewayClient awsApiClient = new AmazonApiGatewayClient();
 
     final AWSLambdaClient awsLambdaClient = new AWSLambdaClient();
@@ -189,22 +189,6 @@ public class CommandHandlerDeployer {
         return "arn:aws:iam::299766559344:role/service-role/LambdaExplorerRole";
     }
 
-    private String loadTemplate() {
-        try (InputStream is = this.getClass().getResourceAsStream("integration-request.vel")) {
-            final StringBuffer capture = new StringBuffer();
-            final CharBuffer buf = CharBuffer.allocate(1024);
-            final InputStreamReader reader = new InputStreamReader(is, "UTF-8");
-            while (reader.read(buf) >= 0) {
-                buf.flip();
-                capture.append((CharSequence) buf);
-                buf.clear();
-            }
-            return capture.toString();
-        } catch (IOException e) {
-            throw new RuntimeException("cannot load integration request template", e);
-        }
-    }
-
     private void integratePostMethod(final CreateRestApiResult createApiResult, final CreateResourceResult crrs,
             final String iarn) {
         final String template = loadTemplate();
@@ -215,7 +199,7 @@ public class CommandHandlerDeployer {
                 .withIntegrationHttpMethod("POST")
                 .withUri(iarn)
                 .withPassthroughBehavior("WHEN_NO_TEMPLATES")
-                .withRequestTemplates(Collections.singletonMap("application/x-www-form-urlencoded",template));
+                .withRequestTemplates(Collections.singletonMap("application/x-www-form-urlencoded", template));
         this.awsApiClient.putIntegration(pirq);
 
         final PutIntegrationResponseRequest pirsrq = new PutIntegrationResponseRequest()
@@ -255,6 +239,22 @@ public class CommandHandlerDeployer {
             throw new RuntimeException("cannot load jar", iox);
         }
         return jarbuf;
+    }
+
+    private String loadTemplate() {
+        try (InputStream is = this.getClass().getResourceAsStream("integration-request.vel")) {
+            final StringBuffer capture = new StringBuffer();
+            final CharBuffer buf = CharBuffer.allocate(1024);
+            final InputStreamReader reader = new InputStreamReader(is, "UTF-8");
+            while (reader.read(buf) >= 0) {
+                buf.flip();
+                capture.append(buf);
+                buf.clear();
+            }
+            return capture.toString();
+        } catch (final IOException e) {
+            throw new RuntimeException("cannot load integration request template", e);
+        }
     }
 
     private void permitInvokeLambda(final String accountId, final CreateRestApiResult createApiResult,

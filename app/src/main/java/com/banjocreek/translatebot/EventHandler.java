@@ -33,12 +33,13 @@ import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 
 public class EventHandler {
 
+    private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
+
+    private static final String TableName = "TranslateSlack";
+
     private static <K, V> Function<Map<K, V>, Optional<V>> field(final K key) {
         return m -> Optional.ofNullable(m.get(key));
     }
-
-    private static final String TableName = "TranslateSlack";
-    private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
 
     public Map<String, String> handle(final Map<String, Object> envelope) {
 
@@ -84,6 +85,23 @@ public class EventHandler {
         return new DBValueRetriever("global:bottoken").get();
     }
 
+    private Collection<String> fetchChannelLanguages(final String channel) {
+
+        final String id = "channel:" + channel + ":languages";
+        final GetItemRequest getItemRequest = new GetItemRequest()
+                .withAttributesToGet(Collections.singletonList("value"))
+                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
+                .withTableName(TableName);
+        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
+        final Optional<String> maybeValue = Optional.ofNullable(getItemResult.getItem())
+                .map(i -> i.get("value"))
+                .map(AttributeValue::getS);
+        if (!maybeValue.isPresent())
+            return Collections.emptyList();
+
+        return Arrays.asList(maybeValue.get().trim().split(" +"));
+    }
+
     private Optional<String> fetchUsername(final String userId) {
         final HashMap<String, String> params = new HashMap<>();
         params.put("token", btoken());
@@ -119,6 +137,16 @@ public class EventHandler {
 
     }
 
+    private Optional<String> googleToken(final String team) {
+        final String id = "team:" + team + ":googletoken";
+        final GetItemRequest getItemRequest = new GetItemRequest()
+                .withAttributesToGet(Collections.singletonList("value"))
+                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
+                .withTableName(TableName);
+        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
+        return Optional.ofNullable(getItemResult.getItem()).map(i -> i.get("value")).map(AttributeValue::getS);
+    }
+
     private void handleMessage(final String team, final Map<String, String> ev) {
 
         System.out.println("In message handler");
@@ -134,11 +162,10 @@ public class EventHandler {
         final String userId = ev.get("user");
 
         final Collection<String> channelLanguages = fetchChannelLanguages(channel);
-        if (channelLanguages.isEmpty()) {
+        if (channelLanguages.isEmpty())
             return;
-        }
 
-        Optional<String> maybeGoogleToken = googleToken(team);
+        final Optional<String> maybeGoogleToken = googleToken(team);
         if (!maybeGoogleToken.isPresent()) {
             System.err.println("team '" + team + "' does not have google token set");
             return;
@@ -328,33 +355,6 @@ public class EventHandler {
     private String vtoken() {
         final String id = "global:callbacktoken";
         return new DBValueRetriever(id).get();
-    }
-
-    private Collection<String> fetchChannelLanguages(String channel) {
-
-        final String id = "channel:" + channel + ":languages";
-        final GetItemRequest getItemRequest = new GetItemRequest()
-                .withAttributesToGet(Collections.singletonList("value"))
-                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
-                .withTableName(TableName);
-        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
-        Optional<String> maybeValue = Optional.ofNullable(getItemResult.getItem())
-                .map(i -> i.get("value"))
-                .map(AttributeValue::getS);
-        if (!maybeValue.isPresent())
-            return Collections.emptyList();
-
-        return Arrays.asList(maybeValue.get().trim().split(" +"));
-    }
-
-    private Optional<String> googleToken(String team) {
-        final String id = "team:" + team + ":googletoken";
-        final GetItemRequest getItemRequest = new GetItemRequest()
-                .withAttributesToGet(Collections.singletonList("value"))
-                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
-                .withTableName(TableName);
-        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
-        return Optional.ofNullable(getItemResult.getItem()).map(i -> i.get("value")).map(AttributeValue::getS);
     }
 
     public static final class Pair<T1, T2> {
