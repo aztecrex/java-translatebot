@@ -65,7 +65,14 @@ public class CommandHandler {
         if (command[0].equals("configure")) {
             if (command.length < 2)
                 return Collections.singletonMap("text", "_usage_: /borges configure <google-auth-token>");
-            setTeamConfiguration(team, command[1]);
+            final Optional<String> maybePromoToken = promo(command[1]);
+            final String token = maybePromoToken.orElse(command[1]);
+            if (!isValidGoogleToken(token))
+                return Collections.singletonMap("text", "A valid google token or Borges promo code is required");
+            setTeamConfiguration(team, token);
+            if (maybePromoToken.isPresent()) {
+                unpromo(command[1]);
+            }
             return Collections.singletonMap("text", "configured");
         }
 
@@ -190,6 +197,15 @@ public class CommandHandler {
         }
     }
 
+    private boolean isValidGoogleToken(final String token) {
+        try {
+            new LanguageRetriever(token).get();
+            return true;
+        } catch (final Exception x) {
+            return false;
+        }
+    }
+
     private Set<String> languages(final String authToken) {
         return new LanguageRetriever(authToken).get();
     }
@@ -204,6 +220,15 @@ public class CommandHandler {
                 och.write(buf);
             }
             buf.clear();
+        }
+    }
+
+    private Optional<String> promo(final String code) {
+        final String id = "promo:" + code;
+        try {
+            return Optional.of(new DBValueRetriever(id).get());
+        } catch (final Exception x) {
+            return Optional.empty();
         }
     }
 
@@ -232,6 +257,15 @@ public class CommandHandler {
         item.put("value", new AttributeValue(value));
         final PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
         ddb.putItem(putItemRequest);
+    }
+
+    private void unpromo(final String code) {
+        final String id = "promo:" + code;
+        try {
+            ddb.deleteItem(TableName, Collections.singletonMap("id", new AttributeValue(id)));
+        } catch (final Exception x) {
+            // OK, just no item with that name
+        }
     }
 
     private final String urlEncodeAll(final Map<String, String> params) {

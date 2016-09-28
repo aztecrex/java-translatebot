@@ -147,20 +147,24 @@ public class OauthHandlerDeployer {
 
         this.awsApiClient.putIntegration(pirq);
 
+        final PutMethodResponseRequest pmrsrq = new PutMethodResponseRequest().withRestApiId(createApiResult.getId())
+                .withResourceId(crrs.getId())
+                .withHttpMethod(HttpMethod)
+                .withStatusCode("302")
+                .withResponseParameters(Collections.singletonMap("method.response.header.Location", true))
+                .withResponseModels(Collections.emptyMap());
+        this.awsApiClient.putMethodResponse(pmrsrq);
+
         final PutIntegrationResponseRequest pirsrq = new PutIntegrationResponseRequest()
                 .withRestApiId(createApiResult.getId())
                 .withResourceId(crrs.getId())
                 .withHttpMethod(HttpMethod)
-                .withStatusCode("200")
-                .withResponseTemplates(Collections.singletonMap("application/json", ""));
+                .withStatusCode("302")
+                .withResponseParameters(Collections.singletonMap("method.response.header.Location",
+                        "'http://translate.banjocreek.io/thankyou.html'"))
+                .withResponseTemplates(Collections.emptyMap());
         this.awsApiClient.putIntegrationResponse(pirsrq);
 
-        final PutMethodResponseRequest pmrsrq = new PutMethodResponseRequest().withRestApiId(createApiResult.getId())
-                .withResourceId(crrs.getId())
-                .withHttpMethod(HttpMethod)
-                .withStatusCode("200")
-                .withResponseModels(Collections.singletonMap("application/json", "Empty"));
-        this.awsApiClient.putMethodResponse(pmrsrq);
     }
 
     private CreateResourceResult createResource(final CreateRestApiResult createApiResult) {

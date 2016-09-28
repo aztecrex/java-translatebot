@@ -109,7 +109,8 @@ public class EventHandlerDeployer {
                 .withDescription("Translator Slack event handler")
                 .withFunctionName(FunctionName)
                 .withHandler("com.banjocreek.translatebot.EventHandler::handle")
-                .withMemorySize(256)
+                .withMemorySize(1024)
+                .withTimeout(30)
                 .withPublish(true)
                 .withRole(executionRole)
                 .withRuntime(Runtime.Java8);
