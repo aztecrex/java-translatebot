@@ -75,7 +75,8 @@ public class CommandHandler {
             final String resp = "now translating: " + curlangs.stream().collect(Collectors.joining(" "));
             return Collections.singletonMap("text", resp);
         } else if (command[0].equals("languages")) {
-            final String resp = new TreeSet<>(languages).stream().collect(Collectors.joining("\n"));
+            final String resp = "Supported languages: "
+                    + new TreeSet<>(languages).stream().collect(Collectors.joining(" "));
             return Collections.singletonMap("text", resp);
         } else if (command[0].equals("show")) {
             final Collection<String> current = fetchChannelLanguages(channel);
@@ -149,4 +150,5 @@ public class CommandHandler {
     private String vtoken() {
         return new DBValueRetriever("global:callbacktoken").get();
     }
+
 }
