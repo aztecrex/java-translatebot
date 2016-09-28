@@ -55,8 +55,9 @@ public class OauthHandler {
         } catch (final Exception x) {
             System.err.println("Uh Oh");
             x.printStackTrace(System.err);
+            return Collections.singletonMap("ok", false);
         }
-        return Collections.singletonMap("location", "http://translate.banjocreek.io/thankyou.html");
+        return Collections.singletonMap("ok",true);
 
     }
 
