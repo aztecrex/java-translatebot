@@ -14,7 +14,6 @@ All high-priority items finished!
     - correctly deal with the Google Translate API translating special sequences such as links and emoji. The current solution is hacky and does not catch everything
     - ask a proper designer to make the pages
     - use bot instead of command output to display current languages
-    - validate google api token before storing
     - improve cold-start responsiveness
          - maybe post requests to a Kinesis-based queue?
          - maybe create a lighter dispatcher Lambda Function that invokes the real one?
