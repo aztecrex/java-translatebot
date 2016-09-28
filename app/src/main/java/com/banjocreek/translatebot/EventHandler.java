@@ -19,8 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,11 +37,6 @@ public class EventHandler {
         return m -> Optional.ofNullable(m.get(key));
     }
 
-    private final AtomicReference<DBValueRetriever> botToken = new AtomicReference<>();
-
-    private final ConcurrentHashMap<String, DBValueRetriever> users = new ConcurrentHashMap<>();
-
-    private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<>();
     private static final String TableName = "TranslateSlack";
     private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
 
@@ -88,7 +81,7 @@ public class EventHandler {
     }
 
     private String btoken() {
-        return DBValueRetriever.fetch("global:bottoken", this.botToken);
+        return new DBValueRetriever("global:bottoken").get();
     }
 
     private Optional<String> fetchUsername(final String userId) {
@@ -324,14 +317,17 @@ public class EventHandler {
 
     private Optional<String> utoken(final String userId) {
         try {
-            return Optional.of(DBValueRetriever.fetch(userId, "user:" + userId + ":token", this.users));
+            final String id = "user:" + userId + ":token";
+            final String token = new DBValueRetriever(id).get();
+            return Optional.of(token);
         } catch (final Exception x) {
             return Optional.empty();
         }
     }
 
     private String vtoken() {
-        return DBValueRetriever.fetch("global:callbacktoken", this.verificationToken);
+        final String id = "global:callbacktoken";
+        return new DBValueRetriever(id).get();
     }
 
     private Collection<String> fetchChannelLanguages(String channel) {
