@@ -81,8 +81,8 @@ public class EventHandler {
         return Collections.emptyMap();
     }
 
-    private String botUser(String teamId) {
-        final String id = ("team:" + teamId + ":botuser");
+    private String botUser(final String teamId) {
+        final String id = "team:" + teamId + ":botuser";
         return new DBValueRetriever(id).get();
     }
 

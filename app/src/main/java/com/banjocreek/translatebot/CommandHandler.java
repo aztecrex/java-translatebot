@@ -1,5 +1,16 @@
 package com.banjocreek.translatebot;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -7,10 +18,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonString;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -29,10 +45,14 @@ public class CommandHandler {
         if (!in.get("token").equals(vtoken()))
             return Collections.emptyMap();
 
+        final String channel = in.get("channel_id");
+        final String team = in.get("team_id");
+        if (!botInChannel(team, channel))
+            return Collections.singletonMap("text",
+                    "Not translating in this channel, */invite @borges* to enable translation");
+
         final String rawCommand = in.get("text").trim();
         final String[] command = rawCommand.split(" +");
-
-        final String team = in.get("team_id");
 
         if (command.length == 0 || command[0].equals("help"))
             return Collections.singletonMap("text",
@@ -56,7 +76,6 @@ public class CommandHandler {
 
         final String googleToken = maybeGoogleToken.get();
 
-        final String channel = in.get("channel_id");
         final Set<String> languages = languages(googleToken);
         if (command[0].equals("add") || command[0].equals("remove")) {
             final ArrayList<String> inlangs = new ArrayList<>();
@@ -93,6 +112,58 @@ public class CommandHandler {
 
     }
 
+    private boolean botInChannel(final String team, final String channel) {
+        final String bot = botUser(team);
+        final String botToken = utoken(bot);
+        try {
+            return channelInfo(botToken, channel).get()
+                    .getJsonObject("channel")
+                    .getJsonArray("members")
+                    .stream()
+                    .map(jv -> ((JsonString) jv).getString())
+                    .filter(bot::equals)
+                    .findAny()
+                    .isPresent();
+        } catch (final Exception x) {
+            return false;
+        }
+    }
+
+    private String botUser(final String teamId) {
+        final String id = "team:" + teamId + ":botuser";
+        return new DBValueRetriever(id).get();
+    }
+
+    private Optional<JsonObject> channelInfo(final String authToken, final String channel) {
+
+        final HashMap<String, String> params = new HashMap<>();
+        params.put("token", authToken);
+        params.put("channel", channel);
+
+        try {
+            final URL u = new URL("https://slack.com/api/channels.info?" + urlEncodeAll(params));
+            System.out.println("URL is " + u);
+            final HttpURLConnection connection = (HttpURLConnection) u.openConnection();
+            connection.setDoInput(true);
+            connection.setRequestMethod("POST");
+            final int response = connection.getResponseCode();
+            try (InputStream is = connection.getInputStream()) {
+                if (response < 200 || response >= 300) {
+                    System.err.println("CRASH: slack returned an error: " + response);
+                    pipe(is, System.err);
+                } else {
+                    final JsonObject rval = Json.createReader(is).readObject();
+                    if (rval.getBoolean("ok"))
+                        return Optional.of(rval);
+                }
+            }
+        } catch (final Exception x) {
+            System.err.println("CRASH: Failure trying to invoke slack API");
+            x.printStackTrace(System.err);
+        }
+        return Optional.empty();
+    }
+
     private Collection<String> fetchChannelLanguages(final String channel) {
 
         final String id = "channel:" + channel + ":languages";
@@ -114,13 +185,26 @@ public class CommandHandler {
         final String id = "team:" + team + ":googletoken";
         try {
             return Optional.of(new DBValueRetriever(id).get());
-        } catch (Exception x) {
+        } catch (final Exception x) {
             return Optional.empty();
         }
     }
 
     private Set<String> languages(final String authToken) {
         return new LanguageRetriever(authToken).get();
+    }
+
+    private void pipe(final InputStream is, final OutputStream dest) throws IOException {
+        final ByteBuffer buf = ByteBuffer.allocate(1024);
+        final ReadableByteChannel ich = Channels.newChannel(is);
+        final WritableByteChannel och = Channels.newChannel(dest);
+        while (ich.read(buf) >= 0) {
+            buf.flip();
+            while (buf.hasRemaining()) {
+                och.write(buf);
+            }
+            buf.clear();
+        }
     }
 
     private void setChannelLanguages(final String channel, final HashSet<String> curlangs) {
@@ -148,6 +232,27 @@ public class CommandHandler {
         item.put("value", new AttributeValue(value));
         final PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
         ddb.putItem(putItemRequest);
+    }
+
+    private final String urlEncodeAll(final Map<String, String> params) {
+        return params.entrySet().stream().map(this::urlEncodeEntry).collect(Collectors.joining("&"));
+    }
+
+    private final String urlEncodeEntry(final Entry<String, String> entry) {
+        return urlEncodeProperty(entry.getKey(), entry.getValue());
+    }
+
+    private final String urlEncodeProperty(final String name, final String value) {
+        try {
+            return new StringBuffer().append(name).append("=").append(URLEncoder.encode(value, "UTF-8")).toString();
+        } catch (final UnsupportedEncodingException e) {
+            throw new RuntimeException("cannot encode value", e);
+        }
+    }
+
+    private String utoken(final String userId) {
+        final String id = "user:" + userId + ":token";
+        return new DBValueRetriever(id).get();
     }
 
     private String vtoken() {

@@ -70,6 +70,13 @@ public class OauthHandler {
         return Collections.unmodifiableMap(rval);
     }
 
+    private PutRequest item(final String id, final String value) {
+        final HashMap<String, AttributeValue> item = new HashMap<>();
+        item.put("id", new AttributeValue(id));
+        item.put("value", new AttributeValue(value));
+        return new PutRequest().withItem(item);
+    }
+
     private final String param(final Entry<String, String> entry) {
         return param(entry.getKey(), entry.getValue());
     }
@@ -111,13 +118,6 @@ public class OauthHandler {
         default:
             throw new RuntimeException("unexpected json type");
         }
-    }
-
-    private PutRequest item(String id, String value) {
-        final HashMap<String, AttributeValue> item = new HashMap<>();
-        item.put("id", new AttributeValue(id));
-        item.put("value", new AttributeValue(value));
-        return new PutRequest().withItem(item);
     }
 
     private void storeResult(final Map<String, Object> result) {

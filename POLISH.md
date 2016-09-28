@@ -3,8 +3,6 @@
 ## To do
 
 - do not store client secret in code
-- do not respond to commands when bot is not in channel
-   - let user know to invite the bot
 - use bot to display current languages
 - correctly parse messages
   - links
@@ -23,4 +21,6 @@
 - do not mark message as edited even when no translation added
 - able to remove all languages from channel 
 - welcome message when bot joins
+- do not respond to commands when bot is not in channel
+   - let user know to invite the bot
 
