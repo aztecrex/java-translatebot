@@ -56,11 +56,11 @@ public class CommandHandler {
 
         if (command.length == 0 || command[0].equals("help"))
             return Collections.singletonMap("text",
-                    "_add languages to channel:_ /borges add <lang> ...\n"
-                            + "_remove languages from channel:_ /borges remove <lang> ...\n"
-                            + "_list supported languages:_ /borges languages\n"
-                            + "_show channel configuration:_ /borges show\n"
-                            + "_configure google translate api token:_ /borges configure <google-auth-token>");
+                    "add languages to channel: */borges add <lang> ...*\n"
+                            + "remove languages from channel: */borges remove <lang> ...*\n"
+                            + "list supported languages: */borges languages*\n"
+                            + "show channel configuration: */borges show*\n"
+                            + "configure Google API token: */borges configure <google-auth-token>*");
 
         if (command[0].equals("configure")) {
             if (command.length < 2)

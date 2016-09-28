@@ -180,7 +180,9 @@ public class EventHandler {
 
         if (ev.containsKey("subtype")) {
             if (ev.get("subtype").equals("channel_join")) {
-                postMessage(team, channel, "I am here to translate your messages, type */borges help* for help");
+                postMessage(team,
+                        channel,
+                        "I am here to translate your messages with the Google Translate API, type */borges help* for help");
             } else {
                 System.out.println("ignoring message with subtype: " + ev.get("subtype"));
             }

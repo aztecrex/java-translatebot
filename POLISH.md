@@ -2,7 +2,6 @@
 
 ## To do
 
-- attribute Google Translate
 - use bot to display current languages
 - validate google api token before storing
 - quick dispatch to second lambda
@@ -25,4 +24,5 @@
 - correctly parse messages  (This is not completely solved yet, what we really need is a way to stop Google from translating the special strings)
   - links
   - emoji
+- attribute Google Translate
 
