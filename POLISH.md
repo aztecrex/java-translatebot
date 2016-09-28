@@ -13,13 +13,13 @@
 - quick dispatch to second lambda
    - requires that we make a really small dispatcher jar
 - cannot remove language when only 1
-- marks message as edited even when no translation added
 - better landing page after authorizing
-
+- do not uses "In" in the message rewrite
 
 
 ## Done
 
 - do not cache anything
 - condense languages output
+- do not mark message as edited even when no translation added
 

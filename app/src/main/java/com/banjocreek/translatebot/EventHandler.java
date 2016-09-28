@@ -177,17 +177,20 @@ public class EventHandler {
                 .map(p -> Pair.create(p._1, p._2.get()))
                 .collect(Collectors.toList());
 
-        final String altText = text + "\n"
-                + translations.stream().map(p -> "_In " + p._1 + ": " + p._2 + "_").collect(Collectors.joining("\n"));
+        if (!translations.isEmpty()) {
+            final String altText = text + "\n" + translations.stream()
+                    .map(p -> "_In " + p._1 + ": " + p._2 + "_")
+                    .collect(Collectors.joining("\n"));
 
-        final boolean updated = updateMessage(userId, channel, timestamp, altText);
+            final boolean updated = updateMessage(userId, channel, timestamp, altText);
 
-        if (!updated) {
-            final String userName = fetchUsername(userId).orElse("Somebody");
+            if (!updated) {
+                final String userName = fetchUsername(userId).orElse("Somebody");
 
-            translations.stream().map(p -> "_" + userName + " says (" + p._1 + "), \"" + p._2 + "\"_").forEach(
-                    x -> postMessage(channel, x));
+                translations.stream().map(p -> "_" + userName + " says (" + p._1 + "), \"" + p._2 + "\"_").forEach(
+                        x -> postMessage(channel, x));
 
+            }
         }
     }
 
