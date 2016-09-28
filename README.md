@@ -16,12 +16,13 @@ Translation services are provided by the Google Translate API.
 
 ## Add to Your Slack Team
 
-You can add it to your Slack team by visiting http://translate.banjocreek.io/signup.html
-and pressing the _Add To Slack_ button. Any member can authorize the bot to modify
-their own messages with that button. This is prototype code so it might not be
-available all the time.
+<a href="https://slack.com/oauth/authorize?scope=commands,bot,chat:write:user,chat:write:bot&client_id=76454819904.83569102723"><img alt="Add to Slack" height="40" width="139" src="https://platform.slack-edge.com/img/add_to_slack.png" srcset="https://platform.slack-edge.com/img/add_to_slack.png 1x, https://platform.slack-edge.com/img/add_to_slack@2x.png 2x" /></a>
 
-After you add it to your team, invite the bot to a channel with __/invite @borges__ . 
+ Any team member can authorize the bot and allow it to modify their messags.
+ 
+This is prototype code so it might not be available all the time.
+
+After you add it to your team, invite the bot to a channel with __/invite @borges__ .
 You will need to present your Google Translate API credentials using the
 __/borges configure <auth-token>__ command only once per Slack team.
 
