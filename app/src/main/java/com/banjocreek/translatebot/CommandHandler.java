@@ -128,12 +128,16 @@ public class CommandHandler {
 
         final String id = "channel:" + channel + ":languages";
 
-        final HashMap<String, AttributeValue> item = new HashMap<>();
-        final String value = curlangs.stream().collect(Collectors.joining(" "));
-        item.put("id", new AttributeValue(id));
-        item.put("value", new AttributeValue(value));
-        final PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
-        ddb.putItem(putItemRequest);
+        if (curlangs.isEmpty()) {
+            ddb.deleteItem(TableName, Collections.singletonMap("id", new AttributeValue(id)));
+        } else {
+            final HashMap<String, AttributeValue> item = new HashMap<>();
+            final String value = curlangs.stream().collect(Collectors.joining(" "));
+            item.put("id", new AttributeValue(id));
+            item.put("value", new AttributeValue(value));
+            final PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
+            ddb.putItem(putItemRequest);
+        }
     }
 
     private void setTeamConfiguration(final String team, final String authToken) {

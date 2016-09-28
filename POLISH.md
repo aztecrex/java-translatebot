@@ -12,7 +12,6 @@
 - welcome message when bot joins
 - quick dispatch to second lambda
    - requires that we make a really small dispatcher jar
-- cannot remove language when only 1
 - better landing page after authorizing
 - do not uses "In" in the message rewrite
 
@@ -22,4 +21,5 @@
 - do not cache anything
 - condense languages output
 - do not mark message as edited even when no translation added
+- able to remove all languages from channel 
 
