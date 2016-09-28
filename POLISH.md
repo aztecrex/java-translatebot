@@ -7,7 +7,6 @@
 - quick dispatch to second lambda
    - requires that we make a really small dispatcher jar
 - better landing page after authorizing
-- do not uses "In" in the message rewrite
 - implement oauth state
 
 
@@ -25,4 +24,5 @@
   - links
   - emoji
 - attribute Google Translate
+- do not uses "In" in the message rewrite
 
