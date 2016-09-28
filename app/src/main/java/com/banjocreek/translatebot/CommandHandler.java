@@ -1,5 +1,16 @@
 package com.banjocreek.translatebot;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -7,12 +18,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonString;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -24,49 +38,44 @@ public class CommandHandler {
 
     private static final AmazonDynamoDBClient ddb = new AmazonDynamoDBClient();
 
-    private final AtomicReference<DBValueRetriever> verificationToken = new AtomicReference<DBValueRetriever>();
-
-    private final AtomicReference<LanguageRetriever> supportedLanguages = new AtomicReference<>();
-
     private static final String TableName = "TranslateSlack";
 
-    public Map<String, Object> handle(Map<String, String> in) {
+    public Map<String, Object> handle(final Map<String, String> in) {
 
-        if (!in.get("token").equals(vtoken())) {
+        if (!in.get("token").equals(vtoken()))
             return Collections.emptyMap();
-        }
 
-        String rawCommand = in.get("text").trim();
-        String[] command = rawCommand.split(" +");
-
+        final String channel = in.get("channel_id");
         final String team = in.get("team_id");
-
-        if (command.length == 0 || command[0].equals("help")) {
+        if (!botInChannel(team, channel))
             return Collections.singletonMap("text",
-                    "_add languages to channel:_ /borges add <lang> ...\n"
-                            + "_remove languages from channel:_ /borges remove <lang> ...\n"
-                            + "_list supported languages:_ /borges languages\n"
-                            + "_show channel configuration:_ /borges show\n"
-                            + "_configure google translate api token:_ /borges configure <google-auth-token>");
-        }
+                    "Not translating in this channel, */invite @borges* to enable translation");
+
+        final String rawCommand = in.get("text").trim();
+        final String[] command = rawCommand.split(" +");
+
+        if (command.length == 0 || command[0].equals("help"))
+            return Collections.singletonMap("text",
+                    "add languages to channel: */borges add <lang> ...*\n"
+                            + "remove languages from channel: */borges remove <lang> ...*\n"
+                            + "list supported languages: */borges languages*\n"
+                            + "show channel configuration: */borges show*\n"
+                            + "configure Google API token: */borges configure <google-auth-token>*");
 
         if (command[0].equals("configure")) {
-            if (command.length < 2) {
+            if (command.length < 2)
                 return Collections.singletonMap("text", "_usage_: /borges configure <google-auth-token>");
-            }
             setTeamConfiguration(team, command[1]);
             return Collections.singletonMap("text", "configured");
         }
 
-        Optional<String> maybeGoogleToken = googleToken(team);
-        if (!maybeGoogleToken.isPresent()) {
+        final Optional<String> maybeGoogleToken = googleToken(team);
+        if (!maybeGoogleToken.isPresent())
             return Collections.singletonMap("text",
                     "You need to configure your Google Translate API Credentials, try /borges help");
-        }
 
         final String googleToken = maybeGoogleToken.get();
 
-        String channel = in.get("channel_id");
         final Set<String> languages = languages(googleToken);
         if (command[0].equals("add") || command[0].equals("remove")) {
             final ArrayList<String> inlangs = new ArrayList<>();
@@ -76,15 +85,17 @@ public class CommandHandler {
                 inlangs.add(command[i]);
             }
             final HashSet<String> curlangs = new HashSet<>(fetchChannelLanguages(channel));
-            if (command[0].equalsIgnoreCase("add"))
+            if (command[0].equalsIgnoreCase("add")) {
                 curlangs.addAll(inlangs);
-            else
+            } else {
                 curlangs.removeAll(inlangs);
+            }
             setChannelLanguages(channel, curlangs);
             final String resp = "now translating: " + curlangs.stream().collect(Collectors.joining(" "));
             return Collections.singletonMap("text", resp);
         } else if (command[0].equals("languages")) {
-            final String resp = new TreeSet<>(languages).stream().collect(Collectors.joining("\n"));
+            final String resp = "Supported languages: "
+                    + new TreeSet<>(languages).stream().collect(Collectors.joining(" "));
             return Collections.singletonMap("text", resp);
         } else if (command[0].equals("show")) {
             final Collection<String> current = fetchChannelLanguages(channel);
@@ -96,36 +107,64 @@ public class CommandHandler {
                         + fetchChannelLanguages(channel).stream().collect(Collectors.joining(" "));
             }
             return Collections.singletonMap("text", resp);
-        } else {
+        } else
             return Collections.singletonMap("text", "unrecognized subcommand '" + command[0] + "'");
+
+    }
+
+    private boolean botInChannel(final String team, final String channel) {
+        final String bot = botUser(team);
+        final String botToken = utoken(bot);
+        try {
+            return channelInfo(botToken, channel).get()
+                    .getJsonObject("channel")
+                    .getJsonArray("members")
+                    .stream()
+                    .map(jv -> ((JsonString) jv).getString())
+                    .filter(bot::equals)
+                    .findAny()
+                    .isPresent();
+        } catch (final Exception x) {
+            return false;
         }
-
     }
 
-    private void setTeamConfiguration(String team, String authToken) {
-
-        final String id = "team:" + team + ":googletoken";
-        final HashMap<String, AttributeValue> item = new HashMap<>();
-        final String value = authToken;
-        item.put("id", new AttributeValue(id));
-        item.put("value", new AttributeValue(value));
-        PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
-        ddb.putItem(putItemRequest);
+    private String botUser(final String teamId) {
+        final String id = "team:" + teamId + ":botuser";
+        return new DBValueRetriever(id).get();
     }
 
-    private void setChannelLanguages(String channel, HashSet<String> curlangs) {
+    private Optional<JsonObject> channelInfo(final String authToken, final String channel) {
 
-        final String id = "channel:" + channel + ":languages";
+        final HashMap<String, String> params = new HashMap<>();
+        params.put("token", authToken);
+        params.put("channel", channel);
 
-        final HashMap<String, AttributeValue> item = new HashMap<>();
-        final String value = curlangs.stream().collect(Collectors.joining(" "));
-        item.put("id", new AttributeValue(id));
-        item.put("value", new AttributeValue(value));
-        PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
-        ddb.putItem(putItemRequest);
+        try {
+            final URL u = new URL("https://slack.com/api/channels.info?" + urlEncodeAll(params));
+            System.out.println("URL is " + u);
+            final HttpURLConnection connection = (HttpURLConnection) u.openConnection();
+            connection.setDoInput(true);
+            connection.setRequestMethod("POST");
+            final int response = connection.getResponseCode();
+            try (InputStream is = connection.getInputStream()) {
+                if (response < 200 || response >= 300) {
+                    System.err.println("CRASH: slack returned an error: " + response);
+                    pipe(is, System.err);
+                } else {
+                    final JsonObject rval = Json.createReader(is).readObject();
+                    if (rval.getBoolean("ok"))
+                        return Optional.of(rval);
+                }
+            }
+        } catch (final Exception x) {
+            System.err.println("CRASH: Failure trying to invoke slack API");
+            x.printStackTrace(System.err);
+        }
+        return Optional.empty();
     }
 
-    private Collection<String> fetchChannelLanguages(String channel) {
+    private Collection<String> fetchChannelLanguages(final String channel) {
 
         final String id = "channel:" + channel + ":languages";
         final GetItemRequest getItemRequest = new GetItemRequest()
@@ -133,7 +172,7 @@ public class CommandHandler {
                 .withKey(Collections.singletonMap("id", new AttributeValue(id)))
                 .withTableName(TableName);
         final GetItemResult getItemResult = ddb.getItem(getItemRequest);
-        Optional<String> maybeValue = Optional.ofNullable(getItemResult.getItem())
+        final Optional<String> maybeValue = Optional.ofNullable(getItemResult.getItem())
                 .map(i -> i.get("value"))
                 .map(AttributeValue::getS);
         if (!maybeValue.isPresent())
@@ -142,21 +181,82 @@ public class CommandHandler {
         return Arrays.asList(maybeValue.get().trim().split(" +"));
     }
 
-    private Set<String> languages(String authToken) {
-        return LanguageRetriever.fetch(authToken, supportedLanguages);
+    private Optional<String> googleToken(final String team) {
+        final String id = "team:" + team + ":googletoken";
+        try {
+            return Optional.of(new DBValueRetriever(id).get());
+        } catch (final Exception x) {
+            return Optional.empty();
+        }
     }
 
-    private Optional<String> googleToken(String team) {
+    private Set<String> languages(final String authToken) {
+        return new LanguageRetriever(authToken).get();
+    }
+
+    private void pipe(final InputStream is, final OutputStream dest) throws IOException {
+        final ByteBuffer buf = ByteBuffer.allocate(1024);
+        final ReadableByteChannel ich = Channels.newChannel(is);
+        final WritableByteChannel och = Channels.newChannel(dest);
+        while (ich.read(buf) >= 0) {
+            buf.flip();
+            while (buf.hasRemaining()) {
+                och.write(buf);
+            }
+            buf.clear();
+        }
+    }
+
+    private void setChannelLanguages(final String channel, final HashSet<String> curlangs) {
+
+        final String id = "channel:" + channel + ":languages";
+
+        if (curlangs.isEmpty()) {
+            ddb.deleteItem(TableName, Collections.singletonMap("id", new AttributeValue(id)));
+        } else {
+            final HashMap<String, AttributeValue> item = new HashMap<>();
+            final String value = curlangs.stream().collect(Collectors.joining(" "));
+            item.put("id", new AttributeValue(id));
+            item.put("value", new AttributeValue(value));
+            final PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
+            ddb.putItem(putItemRequest);
+        }
+    }
+
+    private void setTeamConfiguration(final String team, final String authToken) {
+
         final String id = "team:" + team + ":googletoken";
-        final GetItemRequest getItemRequest = new GetItemRequest()
-                .withAttributesToGet(Collections.singletonList("value"))
-                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
-                .withTableName(TableName);
-        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
-        return Optional.ofNullable(getItemResult.getItem()).map(i -> i.get("value")).map(AttributeValue::getS);
+        final HashMap<String, AttributeValue> item = new HashMap<>();
+        final String value = authToken;
+        item.put("id", new AttributeValue(id));
+        item.put("value", new AttributeValue(value));
+        final PutItemRequest putItemRequest = new PutItemRequest().withItem(item).withTableName(TableName);
+        ddb.putItem(putItemRequest);
+    }
+
+    private final String urlEncodeAll(final Map<String, String> params) {
+        return params.entrySet().stream().map(this::urlEncodeEntry).collect(Collectors.joining("&"));
+    }
+
+    private final String urlEncodeEntry(final Entry<String, String> entry) {
+        return urlEncodeProperty(entry.getKey(), entry.getValue());
+    }
+
+    private final String urlEncodeProperty(final String name, final String value) {
+        try {
+            return new StringBuffer().append(name).append("=").append(URLEncoder.encode(value, "UTF-8")).toString();
+        } catch (final UnsupportedEncodingException e) {
+            throw new RuntimeException("cannot encode value", e);
+        }
+    }
+
+    private String utoken(final String userId) {
+        final String id = "user:" + userId + ":token";
+        return new DBValueRetriever(id).get();
     }
 
     private String vtoken() {
-        return DBValueRetriever.fetch("global:callbacktoken", this.verificationToken);
+        return new DBValueRetriever("global:callbacktoken").get();
     }
+
 }

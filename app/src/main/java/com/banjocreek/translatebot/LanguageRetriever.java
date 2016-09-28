@@ -24,6 +24,27 @@ import javax.json.JsonObject;
 
 public final class LanguageRetriever {
 
+    public static Set<String> fetch(final String authToken, final AtomicReference<LanguageRetriever> retriever) {
+        while (true) {
+            final LanguageRetriever cur = retriever.get();
+            if (cur == null) {
+                final LanguageRetriever proposed = new LanguageRetriever(authToken);
+                if (retriever.compareAndSet(null, proposed))
+                    return proposed.get();
+            } else
+                return cur.get();
+        }
+    }
+
+    public static Set<String> fetch(final String key, final String authToken,
+            final ConcurrentHashMap<String, LanguageRetriever> values) {
+        final LanguageRetriever cur = values.get(key);
+        if (cur == null)
+            return values.putIfAbsent(key, new LanguageRetriever(authToken)).get();
+        else
+            return cur.get();
+    }
+
     private final String authToken;
 
     private boolean fired = false;
@@ -152,27 +173,6 @@ public final class LanguageRetriever {
         } catch (final UnsupportedEncodingException e) {
             throw new RuntimeException("cannot encode value", e);
         }
-    }
-
-    public static Set<String> fetch(final String authToken, final AtomicReference<LanguageRetriever> retriever) {
-        while (true) {
-            final LanguageRetriever cur = retriever.get();
-            if (cur == null) {
-                final LanguageRetriever proposed = new LanguageRetriever(authToken);
-                if (retriever.compareAndSet(null, proposed))
-                    return proposed.get();
-            } else
-                return cur.get();
-        }
-    }
-
-    public static Set<String> fetch(final String key, final String authToken,
-            final ConcurrentHashMap<String, LanguageRetriever> values) {
-        final LanguageRetriever cur = values.get(key);
-        if (cur == null)
-            return values.putIfAbsent(key, new LanguageRetriever(authToken)).get();
-        else
-            return cur.get();
     }
 
 }
