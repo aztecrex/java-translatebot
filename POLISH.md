@@ -2,6 +2,7 @@
 
 ## To do
 
+- do not store client secret in code
 - do not respond to commands when bot is not in channel
    - let user know to invite the bot
 - use bot to display current languages

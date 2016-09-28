@@ -81,8 +81,9 @@ public class EventHandler {
         return Collections.emptyMap();
     }
 
-    private String btoken() {
-        return new DBValueRetriever("global:bottoken").get();
+    private String botUser(String teamId) {
+        final String id = ("team:" + teamId + ":botuser");
+        return new DBValueRetriever(id).get();
     }
 
     private Collection<String> fetchChannelLanguages(final String channel) {
@@ -102,9 +103,11 @@ public class EventHandler {
         return Arrays.asList(maybeValue.get().trim().split(" +"));
     }
 
-    private Optional<String> fetchUsername(final String userId) {
+    private Optional<String> fetchUsername(final String team, final String userId) {
+        final String botUser = botUser(team);
+        final String botToken = utoken(botUser).get();
         final HashMap<String, String> params = new HashMap<>();
-        params.put("token", btoken());
+        params.put("token", botToken);
         params.put("user", userId);
 
         try {
@@ -155,7 +158,7 @@ public class EventHandler {
 
         if (ev.containsKey("subtype")) {
             if (ev.get("subtype").equals("channel_join")) {
-                postMessage(channel, "I am here to translate your messages, type */borges help* for help");
+                postMessage(team, channel, "I am here to translate your messages, type */borges help* for help");
             } else {
                 System.out.println("ignoring message with subtype: " + ev.get("subtype"));
             }
@@ -190,10 +193,10 @@ public class EventHandler {
             final boolean updated = updateMessage(userId, channel, timestamp, altText);
 
             if (!updated) {
-                final String userName = fetchUsername(userId).orElse("Somebody");
+                final String userName = fetchUsername(team, userId).orElse("Somebody");
 
                 translations.stream().map(p -> "_" + userName + " says (" + p._1 + "), \"" + p._2 + "\"_").forEach(
-                        x -> postMessage(channel, x));
+                        x -> postMessage(team, channel, x));
 
             }
         }
@@ -212,9 +215,11 @@ public class EventHandler {
         }
     }
 
-    private void postMessage(final String channel, final String text) {
+    private void postMessage(final String team, final String channel, final String text) {
+        final String botUser = botUser(team);
+        final String botToken = utoken(botUser).get();
         final HashMap<String, String> params = new HashMap<>();
-        params.put("token", btoken());
+        params.put("token", botToken);
         params.put("text", text);
         params.put("channel", channel);
 

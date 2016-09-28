@@ -113,23 +113,27 @@ public class OauthHandler {
         }
     }
 
+    private PutRequest item(String id, String value) {
+        final HashMap<String, AttributeValue> item = new HashMap<>();
+        item.put("id", new AttributeValue(id));
+        item.put("value", new AttributeValue(value));
+        return new PutRequest().withItem(item);
+    }
+
     private void storeResult(final Map<String, Object> result) {
         final String userId = (String) result.get("user_id");
         final String userToken = (String) result.get("access_token");
+        final String teamId = (String) result.get("team_id");
         @SuppressWarnings("unchecked")
         final Map<String, Object> bot = (Map<String, Object>) result.get("bot");
         final String botToken = (String) bot.get("bot_access_token");
+        final String botId = (String) bot.get("bot_user_id");
 
         final ArrayList<PutRequest> putRequests = new ArrayList<>();
-        final HashMap<String, AttributeValue> userItem = new HashMap<>();
-        userItem.put("id", new AttributeValue("user:" + userId + ":token"));
-        userItem.put("value", new AttributeValue(userToken));
-        putRequests.add(new PutRequest().withItem(userItem));
 
-        final HashMap<String, AttributeValue> botItem = new HashMap<>();
-        botItem.put("id", new AttributeValue("global:bottoken"));
-        botItem.put("value", new AttributeValue(botToken));
-        putRequests.add(new PutRequest().withItem(botItem));
+        putRequests.add(item("user:" + userId + ":token", userToken));
+        putRequests.add(item("user:" + botId + ":token", botToken));
+        putRequests.add(item("team:" + teamId + ":botuser", botId));
 
         final List<WriteRequest> writeRequests = putRequests.stream()
                 .map(WriteRequest::new)

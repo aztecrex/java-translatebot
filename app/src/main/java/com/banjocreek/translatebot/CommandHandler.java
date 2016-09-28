@@ -112,12 +112,11 @@ public class CommandHandler {
 
     private Optional<String> googleToken(final String team) {
         final String id = "team:" + team + ":googletoken";
-        final GetItemRequest getItemRequest = new GetItemRequest()
-                .withAttributesToGet(Collections.singletonList("value"))
-                .withKey(Collections.singletonMap("id", new AttributeValue(id)))
-                .withTableName(TableName);
-        final GetItemResult getItemResult = ddb.getItem(getItemRequest);
-        return Optional.ofNullable(getItemResult.getItem()).map(i -> i.get("value")).map(AttributeValue::getS);
+        try {
+            return Optional.of(new DBValueRetriever(id).get());
+        } catch (Exception x) {
+            return Optional.empty();
+        }
     }
 
     private Set<String> languages(final String authToken) {
