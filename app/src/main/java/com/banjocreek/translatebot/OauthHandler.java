@@ -49,15 +49,14 @@ public class OauthHandler {
                 final JsonObject slackAuth = reader.readObject();
                 final Map<String, Object> result = plainifyJsonObject(slackAuth);
                 storeResult(result);
-                return Collections.singletonMap("ok", true);
             } finally {
                 conn.disconnect();
             }
         } catch (final Exception x) {
             System.err.println("Uh Oh");
             x.printStackTrace(System.err);
-            return Collections.singletonMap("error", x.getMessage());
         }
+        return Collections.singletonMap("location", "http://translate.banjocreek.io/thankyou.html");
 
     }
 

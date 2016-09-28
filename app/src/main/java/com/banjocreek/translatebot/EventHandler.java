@@ -210,9 +210,8 @@ public class EventHandler {
                 .collect(Collectors.toList());
 
         if (!translations.isEmpty()) {
-            final String altText = text + "\n" + translations.stream()
-                    .map(p -> "_" + p._1 + ": " + p._2 + "_")
-                    .collect(Collectors.joining("\n"));
+            final String altText = text + "\n"
+                    + translations.stream().map(p -> "_" + p._1 + ": " + p._2 + "_").collect(Collectors.joining("\n"));
 
             final boolean updated = updateMessage(userId, channel, timestamp, altText);
 

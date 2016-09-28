@@ -29,6 +29,7 @@ public class WebsiteDeployer {
     private static final String BucketName, Domain;
 
     private static final String SignupObjectName = "signup.html";
+    private static final String ThankYouObjectName = "thankyou.html";
 
     private static final String Tld = "banjocreek.io";
 
@@ -81,37 +82,29 @@ public class WebsiteDeployer {
                 .withHostedZoneId(zoneId).withChangeBatch(changeBatch);
         this.route53.changeResourceRecordSets(changeRecordsRequest);
 
-        final ObjectMetadata objMetadata = new ObjectMetadata();
-        objMetadata.setContentType("text/html");
-        try (InputStream is = this.getClass().getResourceAsStream(SignupObjectName)) {
-            final PutObjectRequest putObjectRequest = new PutObjectRequest(BucketName,
-                    SignupObjectName,
-                    is,
-                    objMetadata);
-            this.s3.putObject(putObjectRequest);
-        } catch (final IOException e) {
-            throw new RuntimeException("cannot upload signup", e);
-        }
-
-        this.s3.setObjectAcl(BucketName, SignupObjectName, CannedAccessControlList.PublicRead);
+        upload(SignupObjectName);
+        upload(ThankYouObjectName);
 
     }
 
     public void update() {
 
+        upload(SignupObjectName);
+        upload(ThankYouObjectName);
+
+    }
+
+    private void upload(final String name) {
         final ObjectMetadata objMetadata = new ObjectMetadata();
         objMetadata.setContentType("text/html");
-        try (InputStream is = this.getClass().getResourceAsStream(SignupObjectName)) {
-            final PutObjectRequest putObjectRequest = new PutObjectRequest(BucketName,
-                    SignupObjectName,
-                    is,
-                    objMetadata);
+        try (InputStream is = this.getClass().getResourceAsStream(name)) {
+            final PutObjectRequest putObjectRequest = new PutObjectRequest(BucketName, name, is, objMetadata);
             this.s3.putObject(putObjectRequest);
         } catch (final IOException e) {
-            throw new RuntimeException("cannot upload signup", e);
+            throw new RuntimeException("cannot upload " + name, e);
         }
+        this.s3.setObjectAcl(BucketName, name, CannedAccessControlList.PublicRead);
 
-        this.s3.setObjectAcl(BucketName, SignupObjectName, CannedAccessControlList.PublicRead);
     }
 
 }

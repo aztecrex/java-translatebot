@@ -2,11 +2,11 @@
 
 ## To do
 
+- automate latest changes to API gateway !!!!!
 - use bot to display current languages
 - validate google api token before storing
 - quick dispatch to second lambda
    - requires that we make a really small dispatcher jar
-- better landing page after authorizing
 - implement oauth state
 
 
@@ -25,4 +25,5 @@
   - emoji
 - attribute Google Translate
 - do not uses "In" in the message rewrite
+- better landing page after authorizing
 
