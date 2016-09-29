@@ -13,6 +13,8 @@ Translation services are provided by the Google Translate API.
 * if authorized, modifies translated message with the corresponding translations
 * if not authorized, posts translations as the bot user
 
+Here is a [demonstration video](https://youtu.be/d09KIwT768k).
+
 
 ## Add to Your Slack Team
 
