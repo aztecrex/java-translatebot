@@ -1,7 +1,10 @@
 # Backlog
 
 - HIGH PRIORITY
-All high-priority items finished!
+    - improve cold-start responsiveness
+         - maybe post requests to a Kinesis-based queue?
+         - maybe create a lighter dispatcher Lambda Function that invokes the real one?
+         - maybe use something other than Java?
 
 - MOVE FROM PROTOTYPE
     - now that this is prototyped and feedback is coming in, consider restarting the design
@@ -14,9 +17,5 @@ All high-priority items finished!
     - correctly deal with the Google Translate API translating special sequences such as links and emoji. The current solution is hacky and does not catch everything
     - ask a proper designer to make the pages
     - use bot instead of command output to display current languages
-    - improve cold-start responsiveness
-         - maybe post requests to a Kinesis-based queue?
-         - maybe create a lighter dispatcher Lambda Function that invokes the real one?
-         - maybe use something other than Java?
 
 
