@@ -1,4 +1,4 @@
-# Translator Slackbot
+# Borges the Serverless Translator Slackbot
 
 The Translator Slackbot translates messages between users' languages in
 real time. The Slackbot is useful for teams that transcend native language
