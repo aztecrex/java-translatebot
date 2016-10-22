@@ -1,3 +1,8 @@
+
+![alt text](https://img.shields.io/badge/horn-tooted-brightgreen.svg)
+
+_Borges is a winner in the [AWS Serverless Slackbot Challenge](https://awschatbot.devpost.com/)!_
+
 # Borges the Serverless Translator Slackbot
 
 The Translator Slackbot translates messages between users' languages in
